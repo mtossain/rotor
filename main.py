@@ -8,7 +8,7 @@ import sys,os
 import curses
 import datetime
 import math
-#import motor_control
+from motor_control import *
 #import read_heading
 
 az_active = True
@@ -122,54 +122,50 @@ def check_command(k,state):
 
     if az_active:
         if (k == ord('w')):
-            #reverse_az(100)
+            rev_az(1)
             state.az_stat = 'w'
         if (k == ord('e')):
-            #reverse_az(50)
+            rev_az(0.5)
             state.az_stat = 'e'
         if (k == ord('r')):
-            #stop_az()
+            stop_az()
             state.az_stat = 'r'
         if (k == ord('t')):
-            #forward_az(50)
+            for_az(0.5)
             state.az_stat = 't'
         if (k == ord('y')):
-            #forward_az(100)
+            for_az(1)
             state.az_stat = 'y'
 
     if el_active:
         if (k == ord('s')):
-            #reverse_el(100)
+            rev_el(1)
             state.el_stat = 's'
         if (k == ord('d')):
-            #reverse_el(50)
+            rev_el(.5)
             state.el_stat = 'd'
         if (k == ord('f')):
-            #stop_el()
+            stop_el()
             state.el_stat = 'f'
         if (k == ord('g')):
-            #forward_el(50)
+            for_el(.5)
             state.el_stat = 'g'
         if (k == ord('h')):
-            #forward_el(100)
+            for_el(1)
             state.el_stat = 'h'
 
     if az_active and el_active: # Start the goto command
         if (k == ord('x')):
             if (state.az_req-state.az_rep > 1):
-                dum=1
-                #forward_az(100)
+                for_az(1)
             if (state.az_req-state.az_rep < 1):
-                dum=2
-                #reverse_az(100)
+                rev_az(1)
             state.az_stat = 'x'
 
-            if (state.el_req-state.el_rep > 1) :
-                dum=3
-                #forward_el(100)
-            if (state.el_req-state.el_rep < 1) :
-                dum=4
-                #reverse_el(100)
+            if (state.el_req-state.el_rep > 1):
+                for_el(1)
+            if (state.el_req-state.el_rep < 1):
+                rev_el(1)
             state.el_stat = 'x'
 
     return state
@@ -180,12 +176,12 @@ def check_state(state): # Check the state and whether target is achieved
 
         if state.az_stat == 'x': # Do we have to stop the goto command?
             if (abs(state.az_req-state.az_rep) < 1) :
-                #stop_az()
+                stop_az()
                 state.az_stat = 'r'
 
         if state.el_stat == 'x': # Do we have to stop the goto command?
             if (abs(state.el_req-state.el_rep) < 1) :
-                #stop_el()
+                stop_el()
                 state.el_stat = 'r'
 
     return state

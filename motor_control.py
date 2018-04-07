@@ -30,18 +30,18 @@ def stop_el():
 	forward_el.value = 0
 	reverse_el.value = 0
 
-def forward_az(duty_cycle):
+def for_az(duty_cycle):
 	forward_az.value = duty_cycle
 	reverse_az.value = 0
 
-def forward_el(duty_cycle):
+def for_el(duty_cycle):
 	forward_el.value = duty_cycle
 	reverse_el.value = 0
 
-def reverse_az(duty_cycle):
+def rev_az(duty_cycle):
 	forward_az.value = 0
 	reverse_az.value = duty_cycle
 
-def reverse_el(duty_cycle):
+def rev_el(duty_cycle):
 	forward_el.value = 0
 	reverse_el.value = duty_cycle
