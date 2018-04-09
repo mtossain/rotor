@@ -13,7 +13,7 @@ from motor_control_nopwm import *
 from astronomical import *
 #import read_heading
 
-az_active = False
+az_active = True
 el_active = True
 
 class Config:
@@ -120,7 +120,7 @@ def update_screen(stdscr, state):
 
     stdscr.refresh()
 
-def check_command(k,state):
+def check_command(k,conf,state):
 
     if az_active:
         if (k == ord('w')):
@@ -165,19 +165,21 @@ def check_command(k,state):
             state.el_stat = 'h'
 
     if az_active and el_active: # Start the goto and other tracking commands
-        if (k == ord('x'))
+        if (k == ord('x')):
+            state.az_req = conf.goto_az
+            state.el_req = conf.goto_el
             state.az_stat = 'x'
             state.el_stat = 'x'
         if (k == ord('c')):
-            state.az_req,state.el_req = compute_azel_from_radec(state)
+            state.az_req,state.el_req = compute_azel_from_radec(conf)
             state.az_stat = 'c'
             state.el_stat = 'c'
         if (k == ord('b')):
-            state.az_req,state.el_req = compute_azel_from_planet(state)
+            state.az_req,state.el_req = compute_azel_from_planet(conf)
             state.az_stat = 'b'
             state.el_stat = 'b'
         if (k == ord('v')):
-            state.az_req,state.el_req = compute_azel_from_tle(state)
+            state.az_req,state.el_req = compute_azel_from_tle(conf)
             state.az_stat = 'v'
             state.el_stat = 'v'
 
@@ -225,7 +227,7 @@ def mainloop(stdscr):
 
         update_screen(stdscr,state) # Update the screen with new State
 
-        state = check_command(k,state) # Check the typed command
+        state = check_command(k,conf,state) # Check the typed command
 
         state = check_state(state) # Check the state and whether target is achieved
 

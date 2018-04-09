@@ -10,63 +10,63 @@ r2d = math.degrees
 d2r = math.radians
 pi = math.pi
 
-def compute_azel_from_radec(state):
+def compute_azel_from_radec(config):
 
     home = ephem.Observer()
-    home.lon = str(-state.rotor_lon)  # +E
-    home.lat = str(state.rotor_lat) # +N
-    home.elevation = str(state.rotor_alt) # meters
+    home.lon = str(-config.rotor_lon)  # +E
+    home.lat = str(config.rotor_lat) # +N
+    home.elevation = config.rotor_alt # meters
     home.date = dt.datetime.utcnow()
 
     star = ephem.FixedBody()
-    star._ra = ephem.degrees(str(state.ra)) # 16.7
-    star._dec = ephem.degrees(str(state.dec)) # 90.0
+    star._ra = ephem.degrees(str(config.goto_ra)) # 16.7
+    star._dec = ephem.degrees(str(config.goto_dec)) # 90.0
 
     star.compute(home)
 
     return r2d(float(star.az)), r2d(float(star.alt))
 
-def compute_azel_from_planet(state):
+def compute_azel_from_planet(config):
 
     home = ephem.Observer()
-    home.lon = str(-state.rotor_lon)  # +E
-    home.lat = str(state.rotor_lat) # +N
-    home.elevation = str(state.rotor_alt) # meters
+    home.lon = str(-config.rotor_lon)  # +E
+    home.lat = str(config.rotor_lat) # +N
+    home.elevation = config.rotor_alt # meters
     home.date = dt.datetime.utcnow()
 
-    if state.track_planet.lower() == 'sun':
+    if config.track_planet.lower() == 'sun':
         planet = ephem.Sun(home)
-    if state.track_planet.lower() == 'moon':
+    if config.track_planet.lower() == 'moon':
         planet = ephem.Moon(home)
-    if state.track_planet.lower() == 'mercury':
+    if config.track_planet.lower() == 'mercury':
         planet = ephem.Mercury(home)
-    if state.track_planet.lower() == 'venus':
+    if config.track_planet.lower() == 'venus':
         planet = ephem.Venus(home)
-    if state.track_planet.lower() == 'mars':
+    if config.track_planet.lower() == 'mars':
         planet = ephem.Mars(home)
-    if state.track_planet.lower() == 'jupiter':
+    if config.track_planet.lower() == 'jupiter':
         planet = ephem.Jupiter(home)
-    if state.track_planet.lower() == 'saturn':
+    if config.track_planet.lower() == 'saturn':
         planet = ephem.Saturn(home)
-    if state.track_planet.lower() == 'uranus':
+    if config.track_planet.lower() == 'uranus':
         planet = ephem.Uranus(home)
-    if state.track_planet.lower() == 'neptune':
+    if config.track_planet.lower() == 'neptune':
         planet = ephem.Neptune(home)
     planet.compute(home)
 
     return r2d(float(planet.az)), r2d(float(planet.alt))
 
-def compute_azel_from_tle(state):
+def compute_azel_from_tle(config):
 
     home = ephem.Observer()
-    home.lon = str(-state.rotor_lon)  # +E
-    home.lat = str(state.rotor_lat) # +N
-    home.elevation = str(state.rotor_alt) # meters
+    home.lon = str(-config.rotor_lon)  # +E
+    home.lat = str(config.rotor_lat) # +N
+    home.elevation = config.rotor_alt # meters
     home.date = dt.datetime.utcnow()
 
-    f = open(state.track_sat_tle, 'r')
+    f = open(config.track_sat_tle, 'r')
     tle_lines = f.read().decode(encoding='utf-8',errors='ignore').split("\n")[0:3]
-    tle = ephem.readtle(tle_lines[0],tle_lines[1],tle_lines[2])
+    tle = ephem.readtle(str(tle_lines[0]),str(tle_lines[1]),str(tle_lines[2]))
 
     tle.compute(home)
 
