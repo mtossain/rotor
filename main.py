@@ -10,36 +10,37 @@ import datetime
 import math
 #from motor_control import *
 from motor_control_nopwm import *
+from astronomical import *
 #import read_heading
 
-az_active = True
+az_active = False
 el_active = True
 
 class Config:
 
-   rotor_lat = 52
-   rotor_lon = 5
-   rotor_alt = 6
+   rotor_lat = 52 # deg N
+   rotor_lon = 5 # deg E
+   rotor_alt = 6 # m
 
-   bias_az = 10
-   bias_el = 20
+   bias_az = 10 # deg
+   bias_el = 20 # deg
 
-   mask = [0,0,50,0]
+   mask = [0,0,50,0] # sectorials from 0 to 360 in deg
 
-   goto_az = 360
-   goto_el = 90
-   goto_ra = 24
-   goto_dec = 90
-   track_planet = 'Sun'
+   goto_az = 360 # deg from 0 to 360
+   goto_el = 90 # deg
+   goto_ra = 24.6 # hours decimal
+   goto_dec = 90.0 # deg decimal
+   track_planet = 'Sun' # planet in capital or small
    track_sat_tle = 'satnorad.tle'
 
 class State:
 
-    az_req = 180
-    el_req = 90
+    az_req = 180 # deg
+    el_req = 90 # deg
 
-    az_rep = 185
-    el_rep = 95
+    az_rep = 185 # deg
+    el_rep = 85 # deg
 
     az_stat = 'r'
     el_stat = 'f'
@@ -163,21 +164,36 @@ def check_command(k,state):
             for_el()
             state.el_stat = 'h'
 
-    if az_active and el_active: # Start the goto command
-        if (k == ord('x')):
+    if az_active and el_active: # Start the goto and other tracking commands
+        if (k == ord('x'))
+            state.az_stat = 'x'
+            state.el_stat = 'x'
+        if (k == ord('c')):
+            state.az_req,state.el_req = compute_azel_from_radec(state)
+            state.az_stat = 'c'
+            state.el_stat = 'c'
+        if (k == ord('b')):
+            state.az_req,state.el_req = compute_azel_from_planet(state)
+            state.az_stat = 'b'
+            state.el_stat = 'b'
+        if (k == ord('v')):
+            state.az_req,state.el_req = compute_azel_from_tle(state)
+            state.az_stat = 'v'
+            state.el_stat = 'v'
+
+        if (k == ord('x')) or (k == ord('c')) or (k == ord('b')) or (k == ord('v')): # check which direction to move if at all
             if (state.az_req-state.az_rep > 1):
                 #for_az(1)
                 for_az()
             if (state.az_req-state.az_rep < 1):
                 #rev_az(1)
                 rev_az()
-            state.az_stat = 'x'
-
             if (state.el_req-state.el_rep > 1):
-                for_el(1)
+                #for_el(1)
+                for_el()
             if (state.el_req-state.el_rep < 1):
-                rev_el(1)
-            state.el_stat = 'x'
+                #rev_el(1)
+                rev_el()
 
     return state
 
@@ -185,13 +201,13 @@ def check_state(state): # Check the state and whether target is achieved
 
     if az_active and el_active: # Goto only works when both motors active
 
-        if state.az_stat == 'x': # Do we have to stop the goto command?
-            if (abs(state.az_req-state.az_rep) < 1) :
+        if (state.az_stat == 'x') or (state.az_stat == 'c') or (state.az_stat == 'b') or (state.az_stat == 'v'): # Do we have to stop the goto command?
+            if (abs(state.az_req-state.az_rep) < 3) :
                 stop_az()
                 state.az_stat = 'r'
 
-        if state.el_stat == 'x': # Do we have to stop the goto command?
-            if (abs(state.el_req-state.el_rep) < 1) :
+        if (state.el_stat == 'x') or (state.el_stat == 'c') or (state.el_stat == 'b') or (state.el_stat == 'v'): # Do we have to stop the goto command?
+            if (abs(state.el_req-state.el_rep) < 3) :
                 stop_el()
                 state.el_stat = 'r'
 
