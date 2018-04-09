@@ -14,7 +14,7 @@ from astronomical import *
 #import read_heading
 
 az_active = True
-el_active = True
+el_active = False
 
 class Config:
 
@@ -124,43 +124,35 @@ def check_command(k,conf,state):
 
     if az_active:
         if (k == ord('w')):
-            #rev_az(1)
             rev_az()
             state.az_stat = 'w'
         if (k == ord('e')):
-            #rev_az(0.5)
             rev_az()
             state.az_stat = 'e'
         if (k == ord('r')):
             stop_az()
             state.az_stat = 'r'
         if (k == ord('t')):
-            #for_az(0.5)
             for_az()
             state.az_stat = 't'
         if (k == ord('y')):
-            #for_az(1)
             for_az()
             state.az_stat = 'y'
 
     if el_active:
         if (k == ord('s')):
-            #rev_el(1)
             rev_el()
             state.el_stat = 's'
         if (k == ord('d')):
-            #rev_el(.5)
             rev_el()
             state.el_stat = 'd'
         if (k == ord('f')):
             stop_el()
             state.el_stat = 'f'
         if (k == ord('g')):
-            #for_el(.5)
             for_el()
             state.el_stat = 'g'
         if (k == ord('h')):
-            #for_el(1)
             for_el()
             state.el_stat = 'h'
 
@@ -185,16 +177,12 @@ def check_command(k,conf,state):
 
         if (k == ord('x')) or (k == ord('c')) or (k == ord('b')) or (k == ord('v')): # check which direction to move if at all
             if (state.az_req-state.az_rep > 1):
-                #for_az(1)
                 for_az()
             if (state.az_req-state.az_rep < 1):
-                #rev_az(1)
                 rev_az()
             if (state.el_req-state.el_rep > 1):
-                #for_el(1)
                 for_el()
             if (state.el_req-state.el_rep < 1):
-                #rev_el(1)
                 rev_el()
 
     return state

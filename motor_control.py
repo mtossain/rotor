@@ -16,8 +16,8 @@ PWM_REVERSE_el_PIN = 6	# IN2 - Reverse Drive
 
 # Initialise objects for H-Bridge PWM pins
 # Set initial duty cycle to 0 and frequency to 1000
-forward_az = PWMOutputDevice(PWM_FORWARD_az_PIN, True, 0, 1000)
-reverse_az = PWMOutputDevice(PWM_REVERSE_az_PIN, True, 0, 1000)
+forward_az = PWMOutputDevice(PWM_FORWARD_az_PIN, True, 0, 100)
+reverse_az = PWMOutputDevice(PWM_REVERSE_az_PIN, True, 0, 100)
 
 forward_el = PWMOutputDevice(PWM_FORWARD_el_PIN, True, 0, 1000)
 reverse_el = PWMOutputDevice(PWM_REVERSE_el_PIN, True, 0, 1000)
