@@ -8,7 +8,8 @@ import sys,os
 import curses
 import datetime
 import math
-from motor_control import *
+#from motor_control import *
+from motor_control_nopwm import *
 #import read_heading
 
 az_active = True
@@ -122,44 +123,54 @@ def check_command(k,state):
 
     if az_active:
         if (k == ord('w')):
-            rev_az(1)
+            #rev_az(1)
+            rev_az()
             state.az_stat = 'w'
         if (k == ord('e')):
-            rev_az(0.5)
+            #rev_az(0.5)
+            rev_az()
             state.az_stat = 'e'
         if (k == ord('r')):
             stop_az()
             state.az_stat = 'r'
         if (k == ord('t')):
-            for_az(0.5)
+            #for_az(0.5)
+            for_az()
             state.az_stat = 't'
         if (k == ord('y')):
-            for_az(1)
+            #for_az(1)
+            for_az()
             state.az_stat = 'y'
 
     if el_active:
         if (k == ord('s')):
-            rev_el(1)
+            #rev_el(1)
+            rev_el()
             state.el_stat = 's'
         if (k == ord('d')):
-            rev_el(.5)
+            #rev_el(.5)
+            rev_el()
             state.el_stat = 'd'
         if (k == ord('f')):
             stop_el()
             state.el_stat = 'f'
         if (k == ord('g')):
-            for_el(.5)
+            #for_el(.5)
+            for_el()
             state.el_stat = 'g'
         if (k == ord('h')):
-            for_el(1)
+            #for_el(1)
+            for_el()
             state.el_stat = 'h'
 
     if az_active and el_active: # Start the goto command
         if (k == ord('x')):
             if (state.az_req-state.az_rep > 1):
-                for_az(1)
+                #for_az(1)
+                for_az()
             if (state.az_req-state.az_rep < 1):
-                rev_az(1)
+                #rev_az(1)
+                rev_az()
             state.az_stat = 'x'
 
             if (state.el_req-state.el_rep > 1):
