@@ -209,7 +209,7 @@ def check_state(state): # Check the state and whether target is achieved
         if (state.el_stat == 'x') or (state.el_stat == 'c') or (state.el_stat == 'b') or (state.el_stat == 'v'): # Do we have to stop the goto command?
             if (abs(state.el_req-state.el_rep) < 3) :
                 stop_el()
-                state.el_stat = 'r'
+                state.el_stat = 'f'
 
     return state
 
