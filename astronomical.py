@@ -13,14 +13,14 @@ pi = math.pi
 def compute_azel_from_radec(config):
 
     home = ephem.Observer()
-    home.lon = str(-config.rotor_lon)  # +E
     home.lat = str(config.rotor_lat) # +N
+    home.lon = str(config.rotor_lon)  # +E
     home.elevation = config.rotor_alt # meters
     home.date = dt.datetime.utcnow()
 
     star = ephem.FixedBody()
-    star._ra = ephem.degrees(str(config.goto_ra)) # 16.7
-    star._dec = ephem.degrees(str(config.goto_dec)) # 90.0
+    star._ra = str(config.goto_ra) # 16.7
+    star._dec = str(config.goto_dec) # 90.0
 
     star.compute(home)
 
@@ -29,7 +29,7 @@ def compute_azel_from_radec(config):
 def compute_azel_from_planet(config):
 
     home = ephem.Observer()
-    home.lon = str(-config.rotor_lon)  # +E
+    home.lon = str(config.rotor_lon)  # +E
     home.lat = str(config.rotor_lat) # +N
     home.elevation = config.rotor_alt # meters
     home.date = dt.datetime.utcnow()
@@ -59,7 +59,7 @@ def compute_azel_from_planet(config):
 def compute_azel_from_tle(config):
 
     home = ephem.Observer()
-    home.lon = str(-config.rotor_lon)  # +E
+    home.lon = str(config.rotor_lon)  # +E
     home.lat = str(config.rotor_lat) # +N
     home.elevation = config.rotor_alt # meters
     home.date = dt.datetime.utcnow()

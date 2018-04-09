@@ -14,13 +14,13 @@ from astronomical import *
 #import read_heading
 
 az_active = True
-el_active = False
+el_active = True
 
 class Config:
 
-   rotor_lat = 52 # deg N
-   rotor_lon = 5 # deg E
-   rotor_alt = 6 # m
+   rotor_lat = 52.04058 # deg N
+   rotor_lon = 5.03625 # deg E
+   rotor_alt = 4 # m
 
    bias_az = 10 # deg
    bias_el = 20 # deg
@@ -29,10 +29,12 @@ class Config:
 
    goto_az = 360 # deg from 0 to 360
    goto_el = 90 # deg
-   goto_ra = 24.6 # hours decimal
-   goto_dec = 90.0 # deg decimal
-   track_planet = 'Sun' # planet in capital or small
-   track_sat_tle = 'satnorad.tle'
+   
+   goto_ra = 5.5 # hours decimal
+   goto_dec = 22.0 # deg decimal
+   
+   track_planet = 'Moon' # planet in capital or small
+   track_sat_tle = 'tle.txt' # file with TLE elements, first one taken
 
 class State:
 
@@ -84,11 +86,11 @@ def init_screen(stdscr, conf, state):
 
     stdscr.addstr(9, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
 
-    stdscr.addstr(10, 2, "Latitude rotor:          {:5.1f} [deg N]".format(conf.rotor_lat)[:width-1])
-    stdscr.addstr(11, 2, "Longitude rotor:        {:6.1f} [deg E]".format(conf.rotor_lon)[:width-1])
-    stdscr.addstr(12, 2, "Altitude rotor:         {:6.1f} [m]".format(conf.rotor_alt)[:width-1])
-    stdscr.addstr(13, 2, "Bias azimuth sensor:    {:6.1f} [deg]".format(conf.bias_az)[:width-1])
-    stdscr.addstr(14, 2, "Longitude rotor:        {:6.1f} [deg]".format(conf.bias_el)[:width-1])
+    stdscr.addstr(10, 2, "Latitude rotor:         {:6.2f} [deg N]".format(conf.rotor_lat)[:width-1])
+    stdscr.addstr(11, 2, "Longitude rotor:        {:6.2f} [deg E]".format(conf.rotor_lon)[:width-1])
+    stdscr.addstr(12, 2, "Altitude rotor:         {:6.2f} [m]".format(conf.rotor_alt)[:width-1])
+    stdscr.addstr(13, 2, "Bias azimuth sensor:    {:6.2f} [deg]".format(conf.bias_az)[:width-1])
+    stdscr.addstr(14, 2, "Longitude rotor:        {:6.2f} [deg]".format(conf.bias_el)[:width-1])
     stdscr.addstr(15, 2, "Masking:                 {}".format(str(conf.mask))[:width-1])
 
     stdscr.addstr(16, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
