@@ -22,7 +22,7 @@ def compute_azel_from_radec(state):
     star._ra = ephem.degrees(str(state.ra)) # 16.7
     star._dec = ephem.degrees(str(state.dec)) # 90.0
 
-    star.compute(observer)
+    star.compute(home)
 
     return r2d(float(star.az)), r2d(float(star.alt))
 
