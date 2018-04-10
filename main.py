@@ -14,7 +14,9 @@ from astronomical import *
 #import read_heading
 
 az_active = True
+az_sense_active = False
 el_active = True
+el_sense_active = False
 
 class Config:
 
@@ -29,10 +31,10 @@ class Config:
 
    goto_az = 360 # deg from 0 to 360
    goto_el = 90 # deg
-   
+
    goto_ra = 5.5 # hours decimal
    goto_dec = 22.0 # deg decimal
-   
+
    track_planet = 'Moon' # planet in capital or small
    track_sat_tle = 'tle.txt' # file with TLE elements, first one taken
 
@@ -107,7 +109,7 @@ def update_screen(stdscr, state):
 
     height, width = stdscr.getmaxyx() # Get the dimensions of the terminal
 
-    statusbarstr = " UTC {}  |  Rotor control - M. Tossaint  |  Press 'q' to exit  ".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[:width-1]
+    statusbarstr = " UTC {}  |  2018 - M. Tossaint  |  Press ' ' to Stop or 'q' to exit  ".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[:width-1]
     stdscr.addstr(height-1, 0, statusbarstr,curses.color_pair(3)) # Render status bar
 
     if az_active:
@@ -124,14 +126,14 @@ def update_screen(stdscr, state):
 
 def check_command(k,conf,state):
 
-    if az_active:
+    if az_active: # Manual activation azimuth
         if (k == ord('w')):
             rev_az()
             state.az_stat = 'w'
         if (k == ord('e')):
             rev_az()
             state.az_stat = 'e'
-        if (k == ord('r')):
+        if (k == ord('r') or k == ord(' ')):
             stop_az()
             state.az_stat = 'r'
         if (k == ord('t')):
@@ -141,14 +143,23 @@ def check_command(k,conf,state):
             for_az()
             state.az_stat = 'y'
 
-    if el_active:
+        if (k == ord('x')):
+            state.az_stat = 'x'
+        if (k == ord('c')):
+            state.az_stat = 'c'
+        if (k == ord('b')):
+            state.az_stat = 'b'
+        if (k == ord('v')):
+            state.az_stat = 'v'
+
+    if el_active: # Manual activation elevation
         if (k == ord('s')):
             rev_el()
             state.el_stat = 's'
         if (k == ord('d')):
             rev_el()
             state.el_stat = 'd'
-        if (k == ord('f')):
+        if (k == ord('f') or k == ord(' ')):
             stop_el()
             state.el_stat = 'f'
         if (k == ord('g')):
@@ -158,50 +169,52 @@ def check_command(k,conf,state):
             for_el()
             state.el_stat = 'h'
 
-    if az_active and el_active: # Start the goto and other tracking commands
         if (k == ord('x')):
-            state.az_req = conf.goto_az
-            state.el_req = conf.goto_el
-            state.az_stat = 'x'
             state.el_stat = 'x'
         if (k == ord('c')):
-            state.az_req,state.el_req = compute_azel_from_radec(conf)
-            state.az_stat = 'c'
             state.el_stat = 'c'
         if (k == ord('b')):
-            state.az_req,state.el_req = compute_azel_from_planet(conf)
-            state.az_stat = 'b'
             state.el_stat = 'b'
         if (k == ord('v')):
-            state.az_req,state.el_req = compute_azel_from_tle(conf)
-            state.az_stat = 'v'
             state.el_stat = 'v'
-
-        if (k == ord('x')) or (k == ord('c')) or (k == ord('b')) or (k == ord('v')): # check which direction to move if at all
-            if (state.az_req-state.az_rep > 1):
-                for_az()
-            if (state.az_req-state.az_rep < 1):
-                rev_az()
-            if (state.el_req-state.el_rep > 1):
-                for_el()
-            if (state.el_req-state.el_rep < 1):
-                rev_el()
 
     return state
 
 def check_state(state): # Check the state and whether target is achieved
 
-    if az_active and el_active: # Goto only works when both motors active
+    # Update the pointing target
+    if (state.az_stat=='x'):
+        state.az_req = conf.goto_az
+        state.el_req = conf.goto_el
+    if (state.az_stat=='c'):
+        state.az_req,state.el_req = compute_azel_from_radec(conf) # Update the target
+    if (state.az_stat=='b'):
+        state.az_req,state.el_req = compute_azel_from_planet(conf)  # Update the target
+    if (state.az_stat=='v'):
+        state.az_req,state.el_req = compute_azel_from_tle(conf) # Update the target
 
-        if (state.az_stat == 'x') or (state.az_stat == 'c') or (state.az_stat == 'b') or (state.az_stat == 'v'): # Do we have to stop the goto command?
-            if (abs(state.az_req-state.az_rep) < 3) :
+    # Update movement of motors
+    if az_active:
+        if (state.az_req-state.az_rep > 2):
+            for_az()
+        if (state.az_req-state.az_rep < 2):
+            rev_az()
+        if (state.az_stat == 'x') or (state.az_stat == 'c') or (state.az_stat == 'b') or (state.az_stat == 'v'): # Do we have to stop the movement?
+            if (abs(state.az_req-state.az_rep) < 2) :
                 stop_az()
-                state.az_stat = 'r'
+                if (state.az_stat == 'x'): # Only for the goto command finish automatically (no tracking)
+                    state.az_stat = 'r'
 
-        if (state.el_stat == 'x') or (state.el_stat == 'c') or (state.el_stat == 'b') or (state.el_stat == 'v'): # Do we have to stop the goto command?
-            if (abs(state.el_req-state.el_rep) < 3) :
+    if el_active:
+        if (state.el_req-state.el_rep > 2):
+            for_el()
+        if (state.el_req-state.el_rep < 2):
+            rev_el()
+        if (state.el_stat == 'x') or (state.el_stat == 'c') or (state.el_stat == 'b') or (state.el_stat == 'v'): # Do we have to stop the movement?
+            if (abs(state.el_req-state.el_rep) < 2) :
                 stop_el()
-                state.el_stat = 'f'
+                if (state.el_stat == 'x'): # Only for the goto command finish automatically (no tracking)
+                    state.el_stat = 'f'
 
     return state
 
@@ -223,10 +236,10 @@ def mainloop(stdscr):
 
         k = stdscr.getch() # Get next user input
 
-        #if az_active:
-            #state.az_rep = read_az_ang() # Read azimuth sensor output
-        #if el_active:
-            #state.el_rep = read_el_ang() # Read azimuth sensor output
+        if az_sense_active:
+            state.az_rep = read_az_ang() - conf.bias_az # Read azimuth sensor output
+        if el_sense_active:
+            state.el_rep = read_el_ang() - conf.bias_el # Read azimuth sensor output
 
         # For simulation purpose
         #time.sleep(.5)
