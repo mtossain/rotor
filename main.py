@@ -27,10 +27,10 @@ class Config:
    bias_az = 10 # deg
    bias_el = 20 # deg
 
-   mask = 0,0,50,0 # sectorials from 0 to 360 in deg
+   mask = [-90,-90,-90] # sectorials from 0 to 360 in deg
 
-   goto_az = 360 # deg from 0 to 360
-   goto_el = 90 # deg
+   goto_az = 350 # deg from 0 to 360
+   goto_el = 80 # deg
 
    goto_ra = 5.5 # hours decimal
    goto_dec = 22.0 # deg decimal
@@ -40,7 +40,7 @@ class Config:
 
 class State:
 
-    az_req = 180 # deg
+    az_req = 10 # deg
     el_req = 90 # deg
 
     az_rep = 185 # deg
@@ -49,23 +49,20 @@ class State:
     az_stat = 'r'
     el_stat = 'f'
 
-def check_above_mask(conf,state)
+def check_above_mask(conf,state):
 
-    mask_list = conf.mask.split(',')
-    num_masks = len(mask_list)
-
+    above_mask = False
     az_mask = []
-    el_mask = []
-    for i in range(num_masks):
-        az_mask.append(i*360/num_masks)
-        el_mask.append(float(mask_list[i]))
+    el_mask = conf.mask
+    num_masks = len(el_mask)
+    step_mask = 360/num_masks
 
-    for i in range(1,num_masks):
-        if state.az_req>az_mask[i-1] and az_req<az_mask[i]:
-            if state.el_req>el_mask[i-1]:
-                return True
+    az_idx = int(state.az_req)/int(step_mask)
 
-    return False
+    if state.el_req>el_mask[az_idx]:
+    	above_mask = True
+
+    return above_mask
 
 def init_screen(stdscr, conf, state):
 
@@ -107,8 +104,8 @@ def init_screen(stdscr, conf, state):
     stdscr.addstr(11, 2, "Longitude rotor:        {:6.2f} [deg E]".format(conf.rotor_lon)[:width-1])
     stdscr.addstr(12, 2, "Altitude rotor:         {:6.2f} [m]".format(conf.rotor_alt)[:width-1])
     stdscr.addstr(13, 2, "Bias azimuth sensor:    {:6.2f} [deg]".format(conf.bias_az)[:width-1])
-    stdscr.addstr(14, 2, "Longitude rotor:        {:6.2f} [deg]".format(conf.bias_el)[:width-1])
-    stdscr.addstr(15, 2, "Masking:                 {}".format(str(conf.mask))[:width-1])
+    stdscr.addstr(14, 2, "Bias elevation sensor:  {:6.2f} [deg]".format(conf.bias_el)[:width-1])
+    stdscr.addstr(15, 2, "Masking:    {} [deg el]".format(str(conf.mask))[:width-1])
 
     stdscr.addstr(16, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
 
@@ -208,10 +205,10 @@ def check_state(conf,state): # Check the state and whether target is achieved
     if (state.az_stat=='v'):
         state.az_req,state.el_req = compute_azel_from_tle(conf) # Update the target
 
-    if not(check_above_mask(conf,state)): # If requested target is not above mask
+    if not check_above_mask(conf,state): # If requested target is not above mask
         state.az_req = 0
         state.el_req = 90
-    
+
     # Update movement of motors
     if az_active:
         if (state.az_req-state.az_rep > 2):
