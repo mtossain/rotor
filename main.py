@@ -64,9 +64,6 @@ def init_screen(stdscr, conf, state):
 
     height, width = stdscr.getmaxyx() # Get the dimensions of the terminal
 
-    statusbarstr = " UTC {}  |  Rotor control - M. Tossaint  |  Press 'q' to exit  ".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[:width-1]
-    stdscr.addstr(height-1, 0, statusbarstr,curses.color_pair(3)) # Render status bar
-
     stdscr.addstr(0, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
 
     # Print rest of text
@@ -109,7 +106,7 @@ def update_screen(stdscr, state):
 
     height, width = stdscr.getmaxyx() # Get the dimensions of the terminal
 
-    statusbarstr = " UTC {}  |  2018 - M. Tossaint  |  Press ' ' to Stop or 'q' to exit  ".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[:width-1]
+    statusbarstr = " UTC {} | 2018 - M. Tossaint | ' ' to Stop or 'q' to exit  ".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[:width-1]
     stdscr.addstr(height-1, 0, statusbarstr,curses.color_pair(3)) # Render status bar
 
     if az_active:
@@ -180,7 +177,7 @@ def check_command(k,conf,state):
 
     return state
 
-def check_state(state): # Check the state and whether target is achieved
+def check_state(conf,state): # Check the state and whether target is achieved
 
     # Update the pointing target
     if (state.az_stat=='x'):
@@ -232,7 +229,7 @@ def mainloop(stdscr):
 
         state = check_command(k,conf,state) # Check the typed command
 
-        state = check_state(state) # Check the state and whether target is achieved
+        state = check_state(conf,state) # Check the state and whether target is achieved
 
         k = stdscr.getch() # Get next user input
 
