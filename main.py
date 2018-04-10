@@ -27,7 +27,7 @@ class Config:
    bias_az = 10 # deg
    bias_el = 20 # deg
 
-   mask = [0,0,50,0] # sectorials from 0 to 360 in deg
+   mask = 0,0,50,0 # sectorials from 0 to 360 in deg
 
    goto_az = 360 # deg from 0 to 360
    goto_el = 90 # deg
@@ -48,6 +48,24 @@ class State:
 
     az_stat = 'r'
     el_stat = 'f'
+
+def check_above_mask(conf,state)
+
+    mask_list = conf.mask.split(',')
+    num_masks = len(mask_list)
+
+    az_mask = []
+    el_mask = []
+    for i in range(num_masks):
+        az_mask.append(i*360/num_masks)
+        el_mask.append(float(mask_list[i]))
+
+    for i in range(1,num_masks):
+        if state.az_req>az_mask[i-1] and az_req<az_mask[i]:
+            if state.el_req>el_mask[i-1]:
+                return True
+
+    return False
 
 def init_screen(stdscr, conf, state):
 
@@ -190,6 +208,10 @@ def check_state(conf,state): # Check the state and whether target is achieved
     if (state.az_stat=='v'):
         state.az_req,state.el_req = compute_azel_from_tle(conf) # Update the target
 
+    if not(check_above_mask(conf,state)): # If requested target is not above mask
+        state.az_req = 0
+        state.el_req = 90
+    
     # Update movement of motors
     if az_active:
         if (state.az_req-state.az_rep > 2):
