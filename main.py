@@ -24,7 +24,7 @@ class Config:
    rotor_lon = 5.03625 # deg E
    rotor_alt = 4 # m
 
-   bias_az = 10 # deg
+   bias_az = -20 # deg
    bias_el = 20 # deg
 
    mask = [0,90,90,90,90,0] # sectorials from 0 to 360 in deg
@@ -233,7 +233,7 @@ def check_state(conf,state): # Check the state and whether target is achieved
             for_az()
         if (state.az_stat!='r' and state.az_req-state.az_rep < 2 and state.masked):
             rev_az()
-        if (state.az_stat == 'x') or (state.az_stat == 'c') or (state.az_stat == 'b') or (state.az_stat == 'v'): # Do we have to stop the movement?
+        if (state.az_stat == 'x') or (state.az_stat == 'c') or (state.az_stat == 'b') or (state.az_stat == 'v') and (state.az_stat!='e' or state.az_stat!='t' or state.az_stat!='w' or state.az_stat!='y'): # Do we have to stop the movement?
             if (abs(state.az_req-state.az_rep) < 2) :
                 stop_az()
                 if (state.az_stat == 'x'): # Only for the goto command finish automatically (no tracking)
