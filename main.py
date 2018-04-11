@@ -27,7 +27,7 @@ class Config:
    bias_az = 10 # deg
    bias_el = 20 # deg
 
-   mask = [-90,-90,-90] # sectorials from 0 to 360 in deg
+   mask = [0,90,90,90,90,0] # sectorials from 0 to 360 in deg
 
    goto_az = 350 # deg from 0 to 360
    goto_el = 80 # deg
@@ -48,6 +48,11 @@ class State:
 
     az_stat = 'r'
     el_stat = 'f'
+
+    masked = False
+
+def check_start_middle(width,str):
+        return int((width // 2) - (len(str) // 2) - len(str) % 2)
 
 def check_above_mask(conf,state):
 
@@ -76,17 +81,22 @@ def init_screen(stdscr, conf, state):
     curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_YELLOW)
     curses.init_pair(4, curses.COLOR_GREEN, curses.COLOR_BLACK)
     curses.init_pair(5, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+    curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
 
     height, width = stdscr.getmaxyx() # Get the dimensions of the terminal
 
     stdscr.addstr(0, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
 
     # Print rest of text
-    stdscr.addstr(1, 2, "                         <<    <     +     >    >>"[:width-1])
-    stdscr.addstr(2, 2, "Manual Azimuth ctrl:     "[:width-1])
-    stdscr.addstr(2, 27, "'w'  'e'   'r'   't'  'y'"[:width-1],curses.color_pair(4))
-    stdscr.addstr(3, 2, "Manual Elevation ctrl:   "[:width-1])
-    stdscr.addstr(3, 27, "'s'  'd'   'f'   'g'  'h'"[:width-1],curses.color_pair(4))
+    string = "--- Manual Mode Commands ---"
+    stdscr.addstr(0, check_start_middle(width,string), string[:width-1],curses.color_pair(6))
+    string = "   <<    <     +     >    >>"
+    start_x = check_start_middle(width,string)
+    stdscr.addstr(1, start_x, string[:width-1])
+    stdscr.addstr(2, start_x, "AZ "[:width-1])
+    stdscr.addstr(2, start_x+3, "'w'  'e'   'r'   't'  'y'"[:width-1],curses.color_pair(4))
+    stdscr.addstr(3, start_x, "EL "[:width-1])
+    stdscr.addstr(3, start_x+3, "'s'  'd'   'f'   'g'  'h'"[:width-1],curses.color_pair(4))
     stdscr.addstr(5, 2, "'x' goto Azimuth:       {:6.1f} [deg]".format(conf.goto_az)[:width-1])
     stdscr.addstr(5, 2, "'x'"[:width-1],curses.color_pair(4))
     stdscr.addstr(6, 2, "         Elevation:     {:6.1f} [deg]".format(conf.goto_el)[:width-1])
@@ -98,22 +108,30 @@ def init_screen(stdscr, conf, state):
     stdscr.addstr(8, 42,"'v' track satellite file: {}".format(conf.track_sat_tle)[:width-1])
     stdscr.addstr(8, 42,"'v'"[:width-1],curses.color_pair(4))
 
-    stdscr.addstr(9, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
+    stdscr.addstr(10, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
+    string = "--- Configuration ---"
+    stdscr.addstr(10, check_start_middle(width,string), string[:width-1],curses.color_pair(6))
 
-    stdscr.addstr(10, 2, "Latitude rotor:         {:6.2f} [deg N]".format(conf.rotor_lat)[:width-1])
-    stdscr.addstr(11, 2, "Longitude rotor:        {:6.2f} [deg E]".format(conf.rotor_lon)[:width-1])
-    stdscr.addstr(12, 2, "Altitude rotor:         {:6.2f} [m]".format(conf.rotor_alt)[:width-1])
-    stdscr.addstr(13, 2, "Bias azimuth sensor:    {:6.2f} [deg]".format(conf.bias_az)[:width-1])
-    stdscr.addstr(14, 2, "Bias elevation sensor:  {:6.2f} [deg]".format(conf.bias_el)[:width-1])
-    stdscr.addstr(15, 2, "Masking:    {} [deg el]".format(str(conf.mask))[:width-1])
+    string = "Lat rotor: {:.2f} [deg N]".format(conf.rotor_lat)[:width-1]
+    stdscr.addstr(11, check_start_middle(width,string),string)
+    string = "Lon rotor: {:.2f} [deg N]".format(conf.rotor_lon)[:width-1]
+    stdscr.addstr(12, check_start_middle(width,string),string)
+    string = "Alt rotor: {:.2f} [deg N]".format(conf.rotor_alt)[:width-1]
+    stdscr.addstr(13, check_start_middle(width,string),string)
+    string = "Bias AZ sensor: {:.2f} [deg]".format(conf.bias_az)[:width-1]
+    stdscr.addstr(14, check_start_middle(width,string),string)
+    string = "Bias EL sensor:  {:.2f} [deg]".format(conf.bias_el)[:width-1]
+    stdscr.addstr(15, check_start_middle(width,string),string)
+    string ="Masking: {} [deg el]".format(str(conf.mask))[:width-1]
+    stdscr.addstr(16, check_start_middle(width,string),string)
 
-    stdscr.addstr(16, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
+    stdscr.addstr(18, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
+    string = "--- Rotor State Variables ---"
+    stdscr.addstr(18, check_start_middle(width,string), string[:width-1],curses.color_pair(6))
 
-    stdscr.addstr(17, 2, "                          Requested       Reported     Mode"[:width-1])
-    stdscr.addstr(18, 2, "Azimuth rotor:          {:6.1f} [deg]    {:6.1f} [deg]    {}".format(state.az_req,state.az_rep,state.az_stat)[:width-1])
-    stdscr.addstr(19, 2, "Elevation rotor:        {:6.1f} [deg]    {:6.1f} [deg]    {}".format(state.el_req,state.el_rep,state.el_stat)[:width-1])
-
-    stdscr.addstr(20, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
+    stdscr.addstr(19, 2, "                          Requested       Reported     Mode    Masked"[:width-1])
+    stdscr.addstr(20, 2, "Azimuth rotor:          {:6.1f} [deg]    {:6.1f} [deg]    {}       {}".format(state.az_req,state.az_rep,state.az_stat,state.masked)[:width-1])
+    stdscr.addstr(21, 2, "Elevation rotor:        {:6.1f} [deg]    {:6.1f} [deg]    {}       {}".format(state.el_req,state.el_rep,state.el_stat,state.masked)[:width-1])
 
     stdscr.refresh()
 
@@ -122,17 +140,19 @@ def update_screen(stdscr, state):
     height, width = stdscr.getmaxyx() # Get the dimensions of the terminal
 
     statusbarstr = " UTC {} | 2018 - M. Tossaint | ' ' to Stop or 'q' to exit  ".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[:width-1]
-    stdscr.addstr(height-1, 0, statusbarstr,curses.color_pair(3)) # Render status bar
+    stdscr.addstr(height-1, check_start_middle(width,statusbarstr), statusbarstr,curses.color_pair(3)) # Render status bar
 
     if az_active:
-        stdscr.addstr(18, 26, "{:6.1f}".format(state.az_req)[:width-1],curses.color_pair(5)+curses.A_BOLD)
-        stdscr.addstr(18, 42, "{:6.1f}".format(state.az_rep)[:width-1],curses.color_pair(5)+curses.A_BOLD)
-        stdscr.addstr(18, 58, "{}".format(state.az_stat)[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(20, 26, "{:6.1f}".format(state.az_req)[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(20, 42, "{:6.1f}".format(state.az_rep)[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(20, 58, "{}".format(state.az_stat)[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(20, 66, "{} ".format(str(not state.masked))[:width-1],curses.color_pair(5)+curses.A_BOLD)
 
     if el_active:
-        stdscr.addstr(19, 26, "{:6.1f}".format(state.el_req)[:width-1],curses.color_pair(5)+curses.A_BOLD)
-        stdscr.addstr(19, 42, "{:6.1f}".format(state.el_rep)[:width-1],curses.color_pair(5)+curses.A_BOLD)
-        stdscr.addstr(19, 58, "{}".format(state.el_stat)[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(21, 26, "{:6.1f}".format(state.el_req)[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(21, 42, "{:6.1f}".format(state.el_rep)[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(21, 58, "{}".format(state.el_stat)[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(21, 66, "{} ".format(str(not state.masked))[:width-1],curses.color_pair(5)+curses.A_BOLD)
 
     stdscr.refresh()
 
@@ -205,15 +225,13 @@ def check_state(conf,state): # Check the state and whether target is achieved
     if (state.az_stat=='v'):
         state.az_req,state.el_req = compute_azel_from_tle(conf) # Update the target
 
-    if not check_above_mask(conf,state): # If requested target is not above mask
-        state.az_req = 0
-        state.el_req = 90
+    state.masked = check_above_mask(conf,state) # Check whether pointing target is above the mask
 
     # Update movement of motors
     if az_active:
-        if (state.az_req-state.az_rep > 2):
+        if (state.az_req-state.az_rep > 2 and state.masked):
             for_az()
-        if (state.az_req-state.az_rep < 2):
+        if (state.az_req-state.az_rep < 2 and state.masked):
             rev_az()
         if (state.az_stat == 'x') or (state.az_stat == 'c') or (state.az_stat == 'b') or (state.az_stat == 'v'): # Do we have to stop the movement?
             if (abs(state.az_req-state.az_rep) < 2) :
@@ -222,9 +240,9 @@ def check_state(conf,state): # Check the state and whether target is achieved
                     state.az_stat = 'r'
 
     if el_active:
-        if (state.el_req-state.el_rep > 2):
+        if (state.el_req-state.el_rep > 2 and state.masked):
             for_el()
-        if (state.el_req-state.el_rep < 2):
+        if (state.el_req-state.el_rep < 2 and state.masked):
             rev_el()
         if (state.el_stat == 'x') or (state.el_stat == 'c') or (state.el_stat == 'b') or (state.el_stat == 'v'): # Do we have to stop the movement?
             if (abs(state.el_req-state.el_rep) < 2) :
