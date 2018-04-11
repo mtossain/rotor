@@ -88,7 +88,7 @@ def init_screen(stdscr, conf, state):
     stdscr.addstr(0, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
 
     # Print rest of text
-    string = "--- Manual Mode Commands ---"
+    string = "--- Keyboard Commands ---"
     stdscr.addstr(0, check_start_middle(width,string), string[:width-1],curses.color_pair(6))
     string = "   <<    <     +     >    >>"
     start_x = check_start_middle(width,string)
