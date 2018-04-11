@@ -39,7 +39,10 @@ bus = smbus.SMBus(bus_number)
 def read_az_ang():
     for i in range(len_avg):
         for j in range(6):
-          buffer[j] = bus.read_byte_data(address_az, 0xFA+j)
+          try:
+              buffer[j] = bus.read_byte_data(address_az, 0xFA+j)
+          except:
+              dum=1
         ANG_az       = (buffer[4]<<6)+(buffer[5]&0x3F)
         angle_az     = ANG_az/resolution*360
         angles_az[i] = angle_az

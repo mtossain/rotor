@@ -11,12 +11,12 @@ import math
 #from motor_control import *
 from motor_control_nopwm import *
 from astronomical import *
-#import read_heading
+from read_heading import *
 
 az_active = True
-az_sense_active = False
+az_sense_active = True
 el_active = True
-el_sense_active = False
+el_sense_active = True
 
 class Config:
 
@@ -229,9 +229,9 @@ def check_state(conf,state): # Check the state and whether target is achieved
 
     # Update movement of motors
     if az_active:
-        if (state.az_req-state.az_rep > 2 and state.masked):
+        if (state.az_stat!='r' and state.az_req-state.az_rep > 2 and state.masked):
             for_az()
-        if (state.az_req-state.az_rep < 2 and state.masked):
+        if (state.az_stat!='r' and state.az_req-state.az_rep < 2 and state.masked):
             rev_az()
         if (state.az_stat == 'x') or (state.az_stat == 'c') or (state.az_stat == 'b') or (state.az_stat == 'v'): # Do we have to stop the movement?
             if (abs(state.az_req-state.az_rep) < 2) :
@@ -240,9 +240,9 @@ def check_state(conf,state): # Check the state and whether target is achieved
                     state.az_stat = 'r'
 
     if el_active:
-        if (state.el_req-state.el_rep > 2 and state.masked):
+        if (state.el_stat!='f' and state.el_req-state.el_rep > 2 and state.masked):
             for_el()
-        if (state.el_req-state.el_rep < 2 and state.masked):
+        if (state.el_stat!='f' and state.el_req-state.el_rep < 2 and state.masked):
             rev_el()
         if (state.el_stat == 'x') or (state.el_stat == 'c') or (state.el_stat == 'b') or (state.el_stat == 'v'): # Do we have to stop the movement?
             if (abs(state.el_req-state.el_rep) < 2) :
@@ -260,13 +260,16 @@ def mainloop(stdscr):
 
     init_screen(stdscr,conf,state) # Initialise the screen
 
+    stop_az()
+    stop_el()
+
     while (k != ord('q')): # Loop where k is the last character pressed
 
         update_screen(stdscr,state) # Update the screen with new State
 
         state = check_command(k,conf,state) # Check the typed command
 
-        state = check_state(conf,state) # Check the state and whether target is achieved
+        #state = check_state(conf,state) # Check the state and whether target is achieved
 
         k = stdscr.getch() # Get next user input
 
