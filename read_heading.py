@@ -57,7 +57,10 @@ def read_az_mag():
 def read_el_ang():
     for i in range(len_avg):
         for j in range(6):
-          buffer[j] = bus.read_byte_data(address_el, 0xFA+j)
+          try:
+              buffer[j] = bus.read_byte_data(address_el, 0xFA+j)
+          except:
+              dum=0
         AGC_el       = buffer[0]
         MAG_el       = (buffer[2]<<6)+(buffer[3]&0x3F)
         ANG_el       = (buffer[4]<<6)+(buffer[5]&0x3F)

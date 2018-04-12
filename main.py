@@ -2,7 +2,7 @@
 # Control home made rotor on 2 axis
 # 2018 M. Tossaint
 ################################################################################
-
+import logging
 import time
 import sys,os
 import curses
@@ -10,6 +10,13 @@ import datetime
 import math
 import threading
 threads =[]
+
+logger = logging.getLogger('myapp')
+hdlr = logging.FileHandler('debug.log')
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+hdlr.setFormatter(formatter)
+logger.addHandler(hdlr) 
+logger.setLevel(logging.WARNING)
 
 #from motor_control import * # PWM was tested but failed completely
 from motor_control_nopwm import *
@@ -135,7 +142,7 @@ def init_screen(stdscr):
     stdscr.addstr(14, check_start_middle(width,string),string)
     string = "Bias EL sensor:  {:.2f} [deg]".format(conf.bias_el)[:width-1]
     stdscr.addstr(15, check_start_middle(width,string),string)
-    string ="Masking: {} [deg el]".format(str(conf.mask))[:width-1]
+    string = "Masking: {} [deg el]".format(str(conf.mask))[:width-1]
     stdscr.addstr(16, check_start_middle(width,string),string)
 
     stdscr.addstr(18, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
@@ -143,8 +150,8 @@ def init_screen(stdscr):
     stdscr.addstr(18, check_start_middle(width,string), string[:width-1],curses.color_pair(6))
 
     stdscr.addstr(19, 2, "                          Requested       Reported     Mode    Masked"[:width-1])
-    stdscr.addstr(20, 2, "Azimuth rotor:          {:6.1f} [deg]    {:6.1f} [deg]    {}       {}".format(state.az_req,state.az_rep,state.az_stat,state.above_mask)[:width-1])
-    stdscr.addstr(21, 2, "Elevation rotor:        {:6.1f} [deg]    {:6.1f} [deg]    {}       {}".format(state.el_req,state.el_rep,state.el_stat,state.above_mask)[:width-1])
+    stdscr.addstr(20, 2, "Azimuth rotor:          {:6.1f} [deg]    {:6.1f} [deg]    {}       {}".format(state.az_req,state.az_rep,state.az_stat,not state.above_mask)[:width-1])
+    stdscr.addstr(21, 2, "Elevation rotor:        {:6.1f} [deg]    {:6.1f} [deg]    {}       {}".format(state.el_req,state.el_rep,state.el_stat,not state.above_mask)[:width-1])
 
     stdscr.refresh()
 
@@ -161,13 +168,13 @@ def update_screen(stdscr):
         stdscr.addstr(20, 26, "{:6.1f}".format(state.az_req)[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(20, 42, "{:6.1f}".format(state.az_rep)[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(20, 58, "{}".format(state.az_stat)[:width-1],curses.color_pair(5)+curses.A_BOLD)
-        stdscr.addstr(20, 66, "{} ".format(str(state.above_mask))[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(20, 66, "{} ".format(str(not state.above_mask))[:width-1],curses.color_pair(5)+curses.A_BOLD)
 
     if el_active:
         stdscr.addstr(21, 26, "{:6.1f}".format(state.el_req)[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(21, 42, "{:6.1f}".format(state.el_rep)[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(21, 58, "{}".format(state.el_stat)[:width-1],curses.color_pair(5)+curses.A_BOLD)
-        stdscr.addstr(21, 66, "{} ".format(str(state.above_mask))[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(21, 66, "{} ".format(str(not state.above_mask))[:width-1],curses.color_pair(5)+curses.A_BOLD)
 
     stdscr.refresh()
     
@@ -247,16 +254,21 @@ def check_command():
             state.el_stat = 'v'
             state.manual_mode = False
 
+    time.sleep(0.1)
+
 def check_state(): # Check the state and whether target is achieved
 
-    global k,conf,state
+    global conf
+    global state
 
-    if not state.manual_mode: # Checking only needed for non manual modes
+    logger.error('Inside check_state: '+str(state.manual_mode))
+    if state.manual_mode == False: # Checking only needed for non manual modes
 
         # Update the pointing target
         if (state.az_stat=='x') or (state.el_stat=='x'):
             state.az_req = conf.goto_az
             state.el_req = conf.goto_el
+            logger.error('Inside update pointing: '+str(state.el_req))
         if (state.az_stat=='c') or (state.el_stat=='c'):
             state.az_req,state.el_req = compute_azel_from_radec(conf) # Update the target
         if (state.az_stat=='b') or (state.el_stat=='b'):
@@ -293,7 +305,7 @@ def check_state(): # Check the state and whether target is achieved
 
 def read_sensor():
 
-    global k,conf,state
+    global state
 
     if az_sense_active:
         state.az_rep = read_az_ang() - conf.bias_az # Read azimuth sensor output
@@ -305,7 +317,7 @@ def read_sensor():
 def mainloop(stdscr):
 
     global k,conf,state
-
+    logger.error('Started main loop')
     init_screen(stdscr) # Initialise the screen
 
     t_read_sensor = threading.Thread(target=read_sensor)
@@ -324,7 +336,7 @@ def mainloop(stdscr):
 
         k = stdscr.getch() # Get next user input
         
-        time.sleep(0.5)
+        time.sleep(0.1)
 
 def main():
     curses.wrapper(mainloop)
