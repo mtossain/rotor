@@ -9,6 +9,7 @@ import curses
 import datetime
 import math
 import threading
+threads =[]
 
 #from motor_control import * # PWM was tested but failed completely
 from motor_control_nopwm import *
@@ -28,7 +29,7 @@ class Config:
    rotor_alt = 4 # m
 
    bias_az = -20 # deg
-   bias_el = 20 # deg
+   bias_el = 57.9 # deg
 
    mask = [0,90,90,90,90,0] # sectorials from 0 to 360 in deg
 
@@ -55,14 +56,16 @@ class State:
     above_mask = True # Whether pointing target is above or below the set mask
     manual_mode = True # Whether a manual mode or tracking mode command is given
 
-k = 0 # Keypress value
+k=0
 conf = Config() # Get the configuration of the tool
 state = State() # Get the initial state of the rotor
 
 def check_start_middle(width,str):
-        return int((width // 2) - (len(str) // 2) - len(str) % 2)
+    return int((width // 2) - (len(str) // 2) - len(str) % 2)
 
 def check_above_mask():
+
+    global k,conf,state
 
     above_mask = False
     az_mask = []
@@ -78,6 +81,8 @@ def check_above_mask():
     return above_mask
 
 def init_screen(stdscr):
+
+    global k,conf,state
 
     stdscr.clear() # Clear the screen
     curses.curs_set(0) # Hide cursor
@@ -138,12 +143,14 @@ def init_screen(stdscr):
     stdscr.addstr(18, check_start_middle(width,string), string[:width-1],curses.color_pair(6))
 
     stdscr.addstr(19, 2, "                          Requested       Reported     Mode    Masked"[:width-1])
-    stdscr.addstr(20, 2, "Azimuth rotor:          {:6.1f} [deg]    {:6.1f} [deg]    {}       {}".format(state.az_req,state.az_rep,state.az_stat,state.masked)[:width-1])
-    stdscr.addstr(21, 2, "Elevation rotor:        {:6.1f} [deg]    {:6.1f} [deg]    {}       {}".format(state.el_req,state.el_rep,state.el_stat,state.masked)[:width-1])
+    stdscr.addstr(20, 2, "Azimuth rotor:          {:6.1f} [deg]    {:6.1f} [deg]    {}       {}".format(state.az_req,state.az_rep,state.az_stat,state.above_mask)[:width-1])
+    stdscr.addstr(21, 2, "Elevation rotor:        {:6.1f} [deg]    {:6.1f} [deg]    {}       {}".format(state.el_req,state.el_rep,state.el_stat,state.above_mask)[:width-1])
 
     stdscr.refresh()
 
 def update_screen(stdscr):
+
+    global k,conf,state
 
     height, width = stdscr.getmaxyx() # Get the dimensions of the terminal
 
@@ -154,17 +161,21 @@ def update_screen(stdscr):
         stdscr.addstr(20, 26, "{:6.1f}".format(state.az_req)[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(20, 42, "{:6.1f}".format(state.az_rep)[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(20, 58, "{}".format(state.az_stat)[:width-1],curses.color_pair(5)+curses.A_BOLD)
-        stdscr.addstr(20, 66, "{} ".format(str(not state.masked))[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(20, 66, "{} ".format(str(state.above_mask))[:width-1],curses.color_pair(5)+curses.A_BOLD)
 
     if el_active:
         stdscr.addstr(21, 26, "{:6.1f}".format(state.el_req)[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(21, 42, "{:6.1f}".format(state.el_rep)[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(21, 58, "{}".format(state.el_stat)[:width-1],curses.color_pair(5)+curses.A_BOLD)
-        stdscr.addstr(21, 66, "{} ".format(str(not state.masked))[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(21, 66, "{} ".format(str(state.above_mask))[:width-1],curses.color_pair(5)+curses.A_BOLD)
 
     stdscr.refresh()
+    
+    time.sleep(0.1)
 
 def check_command():
+
+    global k,conf,state
 
     if az_active: # Manual activation azimuth
         if (k == ord('w')):
@@ -238,6 +249,8 @@ def check_command():
 
 def check_state(): # Check the state and whether target is achieved
 
+    global k,conf,state
+
     if not state.manual_mode: # Checking only needed for non manual modes
 
         # Update the pointing target
@@ -276,13 +289,22 @@ def check_state(): # Check the state and whether target is achieved
                     state.el_stat = 'f'
                     state.manual_mode = True
 
+    time.sleep(0.1)
+
 def read_sensor():
+
+    global k,conf,state
+
     if az_sense_active:
         state.az_rep = read_az_ang() - conf.bias_az # Read azimuth sensor output
     if el_sense_active:
         state.el_rep = read_el_ang() - conf.bias_el # Read azimuth sensor output
 
+    time.sleep(0.1)
+
 def mainloop(stdscr):
+
+    global k,conf,state
 
     init_screen(stdscr) # Initialise the screen
 
@@ -290,19 +312,19 @@ def mainloop(stdscr):
     threads.append(t_read_sensor)
     t_read_sensor.start() # Read position sensor data
 
-    t_check_command = threading.Thread(target=check_command)
-    threads.append(t_check_command)
-    t_check_command.start() # Check the typed commands
-
     t_check_state = threading.Thread(target=check_state)
     threads.append(t_check_state)
     t_check_state.start() # Check the state and whether target is achieved
 
     while (k != ord('q')): # Loop where k is the last character pressed
 
+        check_command() # Check the typed command
+
         update_screen(stdscr) # Update the screen with new State
 
         k = stdscr.getch() # Get next user input
+        
+        time.sleep(0.5)
 
 def main():
     curses.wrapper(mainloop)
