@@ -8,15 +8,18 @@ import sys,os
 import curses
 import datetime
 import math
-#from motor_control import *
+import threading
+
+#from motor_control import * # PWM was tested but failed completely
 from motor_control_nopwm import *
 from astronomical import *
 from read_heading import *
 
-az_active = True
-az_sense_active = True
-el_active = True
-el_sense_active = True
+az_active = True # Azimuth motors activated?
+az_sense_active = True # Azimuth sensors activated?
+el_active = True # Elevation motors activated?
+el_sense_active = True # Elevation sensors activated?
+tracking_band = 3 # Tracking band in [deg]
 
 class Config:
 
@@ -49,12 +52,17 @@ class State:
     az_stat = 'r'
     el_stat = 'f'
 
-    masked = False
+    above_mask = True # Whether pointing target is above or below the set mask
+    manual_mode = True # Whether a manual mode or tracking mode command is given
+
+k = 0 # Keypress value
+conf = Config() # Get the configuration of the tool
+state = State() # Get the initial state of the rotor
 
 def check_start_middle(width,str):
         return int((width // 2) - (len(str) // 2) - len(str) % 2)
 
-def check_above_mask(conf,state):
+def check_above_mask():
 
     above_mask = False
     az_mask = []
@@ -69,7 +77,7 @@ def check_above_mask(conf,state):
 
     return above_mask
 
-def init_screen(stdscr, conf, state):
+def init_screen(stdscr):
 
     stdscr.clear() # Clear the screen
     curses.curs_set(0) # Hide cursor
@@ -135,7 +143,7 @@ def init_screen(stdscr, conf, state):
 
     stdscr.refresh()
 
-def update_screen(stdscr, state):
+def update_screen(stdscr):
 
     height, width = stdscr.getmaxyx() # Get the dimensions of the terminal
 
@@ -156,132 +164,145 @@ def update_screen(stdscr, state):
 
     stdscr.refresh()
 
-def check_command(k,conf,state):
+def check_command():
 
     if az_active: # Manual activation azimuth
         if (k == ord('w')):
             rev_az()
             state.az_stat = 'w'
+            state.manual_mode = True
         if (k == ord('e')):
             rev_az()
             state.az_stat = 'e'
+            state.manual_mode = True
         if (k == ord('r') or k == ord(' ')):
             stop_az()
             state.az_stat = 'r'
+            state.manual_mode = True
         if (k == ord('t')):
             for_az()
             state.az_stat = 't'
+            state.manual_mode = True
         if (k == ord('y')):
             for_az()
             state.az_stat = 'y'
+            state.manual_mode = True
 
         if (k == ord('x')):
             state.az_stat = 'x'
+            state.manual_mode = False
         if (k == ord('c')):
             state.az_stat = 'c'
+            state.manual_mode = False
         if (k == ord('b')):
             state.az_stat = 'b'
+            state.manual_mode = False
         if (k == ord('v')):
             state.az_stat = 'v'
+            state.manual_mode = False
 
     if el_active: # Manual activation elevation
         if (k == ord('s')):
             rev_el()
             state.el_stat = 's'
+            state.manual_mode = True
         if (k == ord('d')):
             rev_el()
             state.el_stat = 'd'
+            state.manual_mode = True
         if (k == ord('f') or k == ord(' ')):
             stop_el()
             state.el_stat = 'f'
+            state.manual_mode = True
         if (k == ord('g')):
             for_el()
             state.el_stat = 'g'
+            state.manual_mode = True
         if (k == ord('h')):
             for_el()
             state.el_stat = 'h'
+            state.manual_mode = True
 
         if (k == ord('x')):
             state.el_stat = 'x'
+            state.manual_mode = False
         if (k == ord('c')):
             state.el_stat = 'c'
+            state.manual_mode = False
         if (k == ord('b')):
             state.el_stat = 'b'
+            state.manual_mode = False
         if (k == ord('v')):
             state.el_stat = 'v'
+            state.manual_mode = False
 
-    return state
+def check_state(): # Check the state and whether target is achieved
 
-def check_state(conf,state): # Check the state and whether target is achieved
+    if not state.manual_mode: # Checking only needed for non manual modes
 
-    # Update the pointing target
-    if (state.az_stat=='x'):
-        state.az_req = conf.goto_az
-        state.el_req = conf.goto_el
-    if (state.az_stat=='c'):
-        state.az_req,state.el_req = compute_azel_from_radec(conf) # Update the target
-    if (state.az_stat=='b'):
-        state.az_req,state.el_req = compute_azel_from_planet(conf)  # Update the target
-    if (state.az_stat=='v'):
-        state.az_req,state.el_req = compute_azel_from_tle(conf) # Update the target
+        # Update the pointing target
+        if (state.az_stat=='x') or (state.el_stat=='x'):
+            state.az_req = conf.goto_az
+            state.el_req = conf.goto_el
+        if (state.az_stat=='c') or (state.el_stat=='c'):
+            state.az_req,state.el_req = compute_azel_from_radec(conf) # Update the target
+        if (state.az_stat=='b') or (state.el_stat=='b'):
+            state.az_req,state.el_req = compute_azel_from_planet(conf)  # Update the target
+        if (state.az_stat=='v') or (state.el_stat=='v'):
+            state.az_req,state.el_req = compute_azel_from_tle(conf) # Update the target
 
-    state.masked = check_above_mask(conf,state) # Check whether pointing target is above the mask
+        state.above_mask = check_above_mask(conf,state) # Check whether pointing target is above the mask
 
-    # Update movement of motors
-    if az_active:
-        if (state.az_stat!='r' and state.az_req-state.az_rep > 2 and state.masked):
-            for_az()
-        if (state.az_stat!='r' and state.az_req-state.az_rep < 2 and state.masked):
-            rev_az()
-        if (state.az_stat == 'x') or (state.az_stat == 'c') or (state.az_stat == 'b') or (state.az_stat == 'v') and (state.az_stat!='e' or state.az_stat!='t' or state.az_stat!='w' or state.az_stat!='y'): # Do we have to stop the movement?
-            if (abs(state.az_req-state.az_rep) < 2) :
+        # Update movement of motors
+        if az_active:
+            if (state.az_req-state.az_rep > tracking_band and state.above_mask):
+                for_az()
+            if (state.az_req-state.az_rep < tracking_band and state.above_mask):
+                rev_az()
+            if (abs(state.az_req-state.az_rep) < tracking_band) :
                 stop_az()
                 if (state.az_stat == 'x'): # Only for the goto command finish automatically (no tracking)
                     state.az_stat = 'r'
+                    state.manual_mode = True
 
-    if el_active:
-        if (state.el_stat!='f' and state.el_req-state.el_rep > 2 and state.masked):
-            for_el()
-        if (state.el_stat!='f' and state.el_req-state.el_rep < 2 and state.masked):
-            rev_el()
-        if (state.el_stat == 'x') or (state.el_stat == 'c') or (state.el_stat == 'b') or (state.el_stat == 'v'): # Do we have to stop the movement?
-            if (abs(state.el_req-state.el_rep) < 2) :
+        if el_active:
+            if (state.el_req-state.el_rep > tracking_band and state.above_mask):
+                for_el()
+            if (state.el_req-state.el_rep < tracking_band and state.above_mask):
+                rev_el()
+            if (abs(state.el_req-state.el_rep) < tracking_band) :
                 stop_el()
                 if (state.el_stat == 'x'): # Only for the goto command finish automatically (no tracking)
                     state.el_stat = 'f'
+                    state.manual_mode = True
 
-    return state
+def read_sensor():
+    if az_sense_active:
+        state.az_rep = read_az_ang() - conf.bias_az # Read azimuth sensor output
+    if el_sense_active:
+        state.el_rep = read_el_ang() - conf.bias_el # Read azimuth sensor output
 
 def mainloop(stdscr):
 
-    k = 0 # Initialise key press
-    conf = Config() # Get the configuration of the tool
-    state = State() # Get the initial state of the rotor
+    init_screen(stdscr) # Initialise the screen
 
-    init_screen(stdscr,conf,state) # Initialise the screen
+    t_read_sensor = threading.Thread(target=read_sensor)
+    threads.append(t_read_sensor)
+    t_read_sensor.start() # Read position sensor data
 
-    stop_az()
-    stop_el()
+    t_check_command = threading.Thread(target=check_command)
+    threads.append(t_check_command)
+    t_check_command.start() # Check the typed commands
+
+    t_check_state = threading.Thread(target=check_state)
+    threads.append(t_check_state)
+    t_check_state.start() # Check the state and whether target is achieved
 
     while (k != ord('q')): # Loop where k is the last character pressed
 
-        update_screen(stdscr,state) # Update the screen with new State
-
-        state = check_command(k,conf,state) # Check the typed command
-
-        #state = check_state(conf,state) # Check the state and whether target is achieved
+        update_screen(stdscr) # Update the screen with new State
 
         k = stdscr.getch() # Get next user input
-
-        if az_sense_active:
-            state.az_rep = read_az_ang() - conf.bias_az # Read azimuth sensor output
-        if el_sense_active:
-            state.el_rep = read_el_ang() - conf.bias_el # Read azimuth sensor output
-
-        # For simulation purpose
-        #time.sleep(.5)
-        #state.az_rep = state.az_rep-0.1
-        #state.el_rep = state.el_rep-0.1
 
 def main():
     curses.wrapper(mainloop)
