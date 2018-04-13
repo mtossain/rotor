@@ -12,7 +12,7 @@ bus_number = 1
 address_az = 0x40
 address_el = 0x41
 resolution = 16384.0
-len_avg    = 100
+len_avg    = 10
 
 def mean_angle(angles,weights=0,setting='degrees'):
     '''computes the mean angle'''
@@ -37,17 +37,19 @@ angles_el = np.zeros(len_avg)
 bus = smbus.SMBus(bus_number)
 
 def read_az_ang():
+    false_reading = False
     for i in range(len_avg):
         for j in range(6):
           try:
               buffer[j] = bus.read_byte_data(address_az, 0xFA+j)
           except:
-              dum=1
+              false_reading = True
+
         ANG_az       = (buffer[4]<<6)+(buffer[5]&0x3F)
         angle_az     = ANG_az/resolution*360
         angles_az[i] = angle_az
 
-    return mean_angle(angles_az,0,'degrees')
+    return false_reading,mean_angle(angles_az,0,'degrees')
 
 def read_az_mag():
         for j in range(6):

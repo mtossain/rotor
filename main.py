@@ -2,7 +2,6 @@
 # Control home made rotor on 2 axis
 # 2018 M. Tossaint
 ################################################################################
-import logging
 import time
 import sys,os
 import curses
@@ -11,20 +10,13 @@ import math
 import threading
 threads =[]
 
-logger = logging.getLogger('myapp')
-hdlr = logging.FileHandler('debug.log')
-formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-hdlr.setFormatter(formatter)
-logger.addHandler(hdlr)
-logger.setLevel(logging.WARNING)
-
 #from motor_control import * # PWM was tested but failed completely
 from motor_control_nopwm import *
 from astronomical import *
 from read_heading import *
 
 az_active = True # Azimuth motors activated?
-az_sense_active = True # Azimuth sensors activated?
+az_sense_active = False # Azimuth sensors activated?
 el_active = True # Elevation motors activated?
 el_sense_active = True # Elevation sensors activated?
 tracking_band = 3 # Tracking band in [deg]
@@ -60,6 +52,9 @@ class State:
     az_stat = 'r'
     el_stat = 'f'
 
+    motor_az_pins = [0,0]
+    motor_el_pins = [0,0]
+
     above_mask = True # Whether pointing target is above or below the set mask
     manual_mode = True # Whether a manual mode or tracking mode command is given
 
@@ -70,22 +65,31 @@ state = State() # Get the initial state of the rotor
 def check_start_middle(width,str):
     return int((width // 2) - (len(str) // 2) - len(str) % 2)
 
+def check_motor_pins():
+
+    global conf,state
+
+    pin1 = int(os.popen("gpio -g read 19").read()) # This will run the command and return any output
+    pin2 = int(os.popen("gpio -g read 26").read()) # This will run the command and return any output
+    pin3 = int(os.popen("gpio -g read 6").read()) # This will run the command and return any output
+    pin4 = int(os.popen("gpio -g read 13").read()) # This will run the command and return any output
+
+    state.motor_az_pins = [pin1,pin2]
+    state.motor_el_pins = [pin3,pin4]
+
 def check_above_mask():
 
-    global k,conf,state
+    global conf,state
 
-    above_mask = False
-    az_mask = []
-    el_mask = conf.mask
-    num_masks = len(el_mask)
-    step_mask = 360/num_masks
+    step_mask = 360/len(conf.mask)
 
-    az_idx = int(state.az_req)/int(step_mask)
+    az_idx = int(state.az_req)/int(step_mask) # integer division
 
-    if state.el_req>el_mask[az_idx]:
-    	above_mask = True
+    if state.el_req>conf.mask[az_idx]:
+    	state.above_mask = True
+    else:
+        state.above_mask = False
 
-    return above_mask
 
 def init_screen(stdscr):
 
@@ -114,19 +118,19 @@ def init_screen(stdscr):
     start_x = check_start_middle(width,string)
     stdscr.addstr(1, start_x, string[:width-1])
     stdscr.addstr(2, start_x, "AZ "[:width-1])
-    stdscr.addstr(2, start_x+3, "'w'  'e'   'r'   't'  'y'"[:width-1],curses.color_pair(4))
+    stdscr.addstr(2, start_x+3, "'w'  'e'   'r'   't'  'y'"[:width-1],curses.color_pair(4)+curses.A_BOLD)
     stdscr.addstr(3, start_x, "EL "[:width-1])
-    stdscr.addstr(3, start_x+3, "'s'  'd'   'f'   'g'  'h'"[:width-1],curses.color_pair(4))
+    stdscr.addstr(3, start_x+3, "'s'  'd'   'f'   'g'  'h'"[:width-1],curses.color_pair(4)+curses.A_BOLD)
     stdscr.addstr(5, 2, "'x' goto Azimuth:       {:6.1f} [deg]".format(conf.goto_az)[:width-1])
-    stdscr.addstr(5, 2, "'x'"[:width-1],curses.color_pair(4))
+    stdscr.addstr(5, 2, "'x'"[:width-1],curses.color_pair(4)+curses.A_BOLD)
     stdscr.addstr(6, 2, "         Elevation:     {:6.1f} [deg]".format(conf.goto_el)[:width-1])
     stdscr.addstr(5, 42, "'c' track RightAsc:     {:6.1f} [hrs]".format(conf.goto_ra)[:width-1])
-    stdscr.addstr(5, 42, "'c'"[:width-1],curses.color_pair(4))
+    stdscr.addstr(5, 42, "'c'"[:width-1],curses.color_pair(4)+curses.A_BOLD)
     stdscr.addstr(6, 42, "          Declination:  {:6.1f} [deg]".format(conf.goto_dec)[:width-1])
     stdscr.addstr(8, 2,"'b' track plan body:     {}".format(conf.track_planet)[:width-1])
-    stdscr.addstr(8, 2,"'b'"[:width-1],curses.color_pair(4))
+    stdscr.addstr(8, 2,"'b'"[:width-1],curses.color_pair(4)+curses.A_BOLD)
     stdscr.addstr(8, 42,"'v' track satellite file: {}".format(conf.track_sat_tle)[:width-1])
-    stdscr.addstr(8, 42,"'v'"[:width-1],curses.color_pair(4))
+    stdscr.addstr(8, 42,"'v'"[:width-1],curses.color_pair(4)+curses.A_BOLD)
 
     stdscr.addstr(10, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
     string = "--- Configuration ---"
@@ -148,42 +152,45 @@ def init_screen(stdscr):
     stdscr.addstr(18, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
     string = "--- Rotor State Variables ---"
     stdscr.addstr(18, check_start_middle(width,string), string[:width-1],curses.color_pair(6))
-
-    stdscr.addstr(19, 2, "                          Requested       Reported     Mode    Masked"[:width-1])
-    stdscr.addstr(20, 2, "Azimuth rotor:          {:6.1f} [deg]    {:6.1f} [deg]    {}       {}".format(state.az_req,state.az_rep,state.az_stat,not state.above_mask)[:width-1])
-    stdscr.addstr(21, 2, "Elevation rotor:        {:6.1f} [deg]    {:6.1f} [deg]    {}       {}".format(state.el_req,state.el_rep,state.el_stat,not state.above_mask)[:width-1])
+    
+    stdscr.addstr(19, 2, "                          Requested      Reported     Mode   Masked    Pins"[:width-1])
+    stdscr.addstr(20, 2, "Azimuth rotor:          {:6.1f} [deg]   {:6.1f} [deg]    {}      {}".format(state.az_req,state.az_rep,state.az_stat,not state.above_mask)[:width-1])
+    stdscr.addstr(21, 2, "Elevation rotor:        {:6.1f} [deg]   {:6.1f} [deg]    {}      {}".format(state.el_req,state.el_rep,state.el_stat,not state.above_mask)[:width-1])
 
     stdscr.refresh()
 
 def update_screen(stdscr):
 
-    global k,conf,state
+    global state
 
     height, width = stdscr.getmaxyx() # Get the dimensions of the terminal
 
     statusbarstr = " UTC {} | 2018 - M. Tossaint | ' ' to Stop or 'q' to exit  ".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[:width-1]
     stdscr.addstr(height-1, check_start_middle(width,statusbarstr), statusbarstr,curses.color_pair(3)) # Render status bar
 
+    check_motor_pins()
+
     if az_active:
         stdscr.addstr(20, 26, "{:6.1f}".format(state.az_req)[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(20, 42, "{:6.1f}".format(state.az_rep)[:width-1],curses.color_pair(5)+curses.A_BOLD)
-        stdscr.addstr(20, 58, "{}".format(state.az_stat)[:width-1],curses.color_pair(5)+curses.A_BOLD)
-        stdscr.addstr(20, 66, "{} ".format(str(not state.above_mask))[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(20, 57, "{}".format(state.az_stat)[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(20, 64, "{} ".format(str(not state.above_mask))[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(20, 72, "{} ".format(str(state.motor_az_pins))[:width-1],curses.color_pair(5)+curses.A_BOLD)
 
     if el_active:
         stdscr.addstr(21, 26, "{:6.1f}".format(state.el_req)[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(21, 42, "{:6.1f}".format(state.el_rep)[:width-1],curses.color_pair(5)+curses.A_BOLD)
-        stdscr.addstr(21, 58, "{}".format(state.el_stat)[:width-1],curses.color_pair(5)+curses.A_BOLD)
-        stdscr.addstr(21, 66, "{} ".format(str(not state.above_mask))[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(21, 57, "{}".format(state.el_stat)[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(21, 64, "{} ".format(str(not state.above_mask))[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        stdscr.addstr(21, 72, "{} ".format(str(state.motor_el_pins))[:width-1],curses.color_pair(5)+curses.A_BOLD)
 
     stdscr.refresh()
 
 def check_command():
 
-    global k,conf,state
+    global k,state
 
-    while True:
-        if az_active: # Manual activation azimuth
+    if az_active: # Manual activation azimuth
             if (k == ord('w')):
                 rev_az()
                 state.az_stat = 'w'
@@ -218,7 +225,7 @@ def check_command():
                 state.az_stat = 'v'
                 state.manual_mode = False
 
-        if el_active: # Manual activation elevation
+    if el_active: # Manual activation elevation
             if (k == ord('s')):
                 rev_el()
                 state.el_stat = 's'
@@ -253,22 +260,18 @@ def check_command():
                 state.el_stat = 'v'
                 state.manual_mode = False
 
-        time.sleep(0.1)
-
 def check_state(): # Check the state and whether target is achieved
 
     global conf, state
 
-    #logger.error('Inside check_state: '+str(state.manual_mode))
-    while True:
+    check_above_mask()
 
-        if state.manual_mode == False: # Checking only needed for non manual modes
+    if state.manual_mode == False: # Checking only needed for non manual modes
 
             # Update the pointing target
             if (state.az_stat=='x') or (state.el_stat=='x'):
                 state.az_req = conf.goto_az
                 state.el_req = conf.goto_el
-                #logger.error('Inside update pointing: '+str(state.el_req))
             if (state.az_stat=='c') or (state.el_stat=='c'):
                 state.az_req,state.el_req = compute_azel_from_radec(conf) # Update the target
             if (state.az_stat=='b') or (state.el_stat=='b'):
@@ -276,7 +279,7 @@ def check_state(): # Check the state and whether target is achieved
             if (state.az_stat=='v') or (state.el_stat=='v'):
                 state.az_req,state.el_req = compute_azel_from_tle(conf) # Update the target
 
-            state.above_mask = check_above_mask(conf,state) # Check whether pointing target is above the mask
+            check_above_mask() # Check whether pointing target is above the mask
 
             # Update movement of motors
             if az_active:
@@ -301,45 +304,42 @@ def check_state(): # Check the state and whether target is achieved
                         state.el_stat = 'f'
                         state.manual_mode = True
 
-        time.sleep(0.1)
-
 def read_sensor():
 
-    global state
-
-    while True:
-        if az_sense_active:
-            state.az_rep = read_az_ang() - conf.bias_az # Read azimuth sensor output
-        if el_sense_active:
-            state.el_rep = read_el_ang() - conf.bias_el # Read azimuth sensor output
-
-        time.sleep(0.1)
+    global conf,stat
+        
+    if az_sense_active:
+        false_reading,angle = read_az_ang() # Read azimuth sensor output
+        if not false_reading:
+            state.az_rep = angle - conf.bias_az
+    if el_sense_active:
+        state.el_rep = read_el_ang() - conf.bias_el # Read azimuth sensor output
 
 def mainloop(stdscr):
 
     global k,conf,state
-    logger.error('Started main loop')
+
     init_screen(stdscr) # Initialise the screen
+    
+    #t_read_sensor = threading.Thread(target=read_sensor)
+    #threads.append(t_read_sensor)
+    #t_read_sensor.start() # Read position sensor data
 
-    t_read_sensor = threading.Thread(target=read_sensor)
-    threads.append(t_read_sensor)
-    t_read_sensor.start() # Read position sensor data
-
-    t_check_command = threading.Thread(target=check_command)
-    threads.append(t_check_command)
-    t_check_command.start() # Check the keypresses
-
-    t_check_state = threading.Thread(target=check_state)
-    threads.append(t_check_state)
-    t_check_state.start() # Check the state and whether target is achieved
+#    t_check_state = threading.Thread(target=check_state)
+#    threads.append(t_check_state)
+#    t_check_state.start() # Check the state and whether target is achieved
 
     while (k != ord('q')): # Loop where k is the last character pressed
+
+        check_command()
+
+        check_state() # Check the state and whether target is achieved
 
         update_screen(stdscr) # Update the screen with new State
 
         k = stdscr.getch() # Get next user input
-
-        time.sleep(0.1)
+       
+        read_sensor()
 
 def main():
     curses.wrapper(mainloop)
