@@ -12,7 +12,7 @@ bus_number = 1
 address_az = 0x40
 address_el = 0x41
 resolution = 16384.0
-len_avg    = 10
+len_avg    = 30
 
 def mean_angle(angles,weights=0,setting='degrees'):
     '''computes the mean angle'''

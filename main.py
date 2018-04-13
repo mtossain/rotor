@@ -113,7 +113,7 @@ def init_screen(stdscr):
 
     # Print rest of text
     string = "--- Keyboard Commands ---"
-    stdscr.addstr(0, check_start_middle(width,string), string[:width-1],curses.color_pair(6))
+    stdscr.addstr(0, check_start_middle(width,string), string[:width-1],curses.color_pair(6)+curses.A_BOLD)
     string = "   <<    <     +     >    >>"
     start_x = check_start_middle(width,string)
     stdscr.addstr(1, start_x, string[:width-1])
@@ -134,7 +134,7 @@ def init_screen(stdscr):
 
     stdscr.addstr(10, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
     string = "--- Configuration ---"
-    stdscr.addstr(10, check_start_middle(width,string), string[:width-1],curses.color_pair(6))
+    stdscr.addstr(10, check_start_middle(width,string), string[:width-1],curses.color_pair(6)+curses.A_BOLD)
 
     string = "Lat rotor: {:.2f} [deg N]".format(conf.rotor_lat)[:width-1]
     stdscr.addstr(11, check_start_middle(width,string),string)
@@ -151,7 +151,7 @@ def init_screen(stdscr):
 
     stdscr.addstr(18, 0, '-' * width,curses.color_pair(2)) # Seperation line over full length
     string = "--- Rotor State Variables ---"
-    stdscr.addstr(18, check_start_middle(width,string), string[:width-1],curses.color_pair(6))
+    stdscr.addstr(18, check_start_middle(width,string), string[:width-1],curses.color_pair(6)+curses.A_BOLD)
     
     stdscr.addstr(19, 2, "                          Requested      Reported     Mode   Masked    Pins"[:width-1])
     stdscr.addstr(20, 2, "Azimuth rotor:          {:6.1f} [deg]   {:6.1f} [deg]    {}      {}".format(state.az_req,state.az_rep,state.az_stat,not state.above_mask)[:width-1])
@@ -191,74 +191,74 @@ def check_command():
     global k,state
 
     if az_active: # Manual activation azimuth
-            if (k == ord('w')):
-                rev_az()
-                state.az_stat = 'w'
-                state.manual_mode = True
-            if (k == ord('e')):
-                rev_az()
-                state.az_stat = 'e'
-                state.manual_mode = True
-            if (k == ord('r') or k == ord(' ')):
-                stop_az()
-                state.az_stat = 'r'
-                state.manual_mode = True
-            if (k == ord('t')):
-                for_az()
-                state.az_stat = 't'
-                state.manual_mode = True
-            if (k == ord('y')):
-                for_az()
-                state.az_stat = 'y'
-                state.manual_mode = True
+        if (k == ord('w')):
+            rev_az()
+            state.az_stat = 'w'
+            state.manual_mode = True
+        if (k == ord('e')):
+            rev_az()
+            state.az_stat = 'e'
+            state.manual_mode = True
+        if (k == ord('r') or k == ord(' ')):
+            stop_az()
+            state.az_stat = 'r'
+            state.manual_mode = True
+        if (k == ord('t')):
+            for_az()
+            state.az_stat = 't'
+            state.manual_mode = True
+        if (k == ord('y')):
+            for_az()
+            state.az_stat = 'y'
+            state.manual_mode = True
 
-            if (k == ord('x')):
-                state.az_stat = 'x'
-                state.manual_mode = False
-            if (k == ord('c')):
-                state.az_stat = 'c'
-                state.manual_mode = False
-            if (k == ord('b')):
-                state.az_stat = 'b'
-                state.manual_mode = False
-            if (k == ord('v')):
-                state.az_stat = 'v'
-                state.manual_mode = False
+        if (k == ord('x')):
+            state.az_stat = 'x'
+            state.manual_mode = False
+        if (k == ord('c')):
+            state.az_stat = 'c'
+            state.manual_mode = False
+        if (k == ord('b')):
+            state.az_stat = 'b'
+            state.manual_mode = False
+        if (k == ord('v')):
+            state.az_stat = 'v'
+            state.manual_mode = False
 
     if el_active: # Manual activation elevation
-            if (k == ord('s')):
-                rev_el()
-                state.el_stat = 's'
-                state.manual_mode = True
-            if (k == ord('d')):
-                rev_el()
-                state.el_stat = 'd'
-                state.manual_mode = True
-            if (k == ord('f') or k == ord(' ')):
-                stop_el()
-                state.el_stat = 'f'
-                state.manual_mode = True
-            if (k == ord('g')):
-                for_el()
-                state.el_stat = 'g'
-                state.manual_mode = True
-            if (k == ord('h')):
-                for_el()
-                state.el_stat = 'h'
-                state.manual_mode = True
+        if (k == ord('s')):
+            rev_el()
+            state.el_stat = 's'
+            state.manual_mode = True
+        if (k == ord('d')):
+            rev_el()
+            state.el_stat = 'd'
+            state.manual_mode = True
+        if (k == ord('f') or k == ord(' ')):
+            stop_el()
+            state.el_stat = 'f'
+            state.manual_mode = True
+        if (k == ord('g')):
+            for_el()
+            state.el_stat = 'g'
+            state.manual_mode = True
+        if (k == ord('h')):
+            for_el()
+            state.el_stat = 'h'
+            state.manual_mode = True
 
-            if (k == ord('x')):
-                state.el_stat = 'x'
-                state.manual_mode = False
-            if (k == ord('c')):
-                state.el_stat = 'c'
-                state.manual_mode = False
-            if (k == ord('b')):
-                state.el_stat = 'b'
-                state.manual_mode = False
-            if (k == ord('v')):
-                state.el_stat = 'v'
-                state.manual_mode = False
+        if (k == ord('x')):
+            state.el_stat = 'x'
+            state.manual_mode = False
+        if (k == ord('c')):
+            state.el_stat = 'c'
+            state.manual_mode = False
+        if (k == ord('b')):
+            state.el_stat = 'b'
+            state.manual_mode = False
+        if (k == ord('v')):
+            state.el_stat = 'v'
+            state.manual_mode = False
 
 def check_state(): # Check the state and whether target is achieved
 
@@ -283,6 +283,8 @@ def check_state(): # Check the state and whether target is achieved
 
             # Update movement of motors
             if az_active:
+                if (not state.above_mask):
+                    stop_az()
                 if (state.az_req-state.az_rep > tracking_band and state.above_mask):
                     for_az()
                 if (state.az_req-state.az_rep < tracking_band and state.above_mask):
@@ -294,6 +296,8 @@ def check_state(): # Check the state and whether target is achieved
                         state.manual_mode = True
 
             if el_active:
+                if (not state.above_mask):
+                    stop_el()
                 if (state.el_req-state.el_rep > tracking_band and state.above_mask):
                     for_el()
                 if (state.el_req-state.el_rep < tracking_band and state.above_mask):
