@@ -295,15 +295,16 @@ def check_state(): # Check the state and whether target is achieved
             if az_active:
                 if (not state.above_mask):
                     stop_az()
-                if (state.az_req-state.az_rep > az_tracking_band and state.above_mask):
-                    for_az()
-                if (state.az_req-state.az_rep < az_tracking_band and state.above_mask):
-                    rev_az()
                 if (abs(state.az_req-state.az_rep) < az_tracking_band) :
                     stop_az()
                     if (state.az_stat == 'x'): # Only for the goto command finish automatically (no tracking)
                         state.az_stat = 'r'
                         state.manual_mode = True
+                else: # order is very important otherwise start/stop
+                    if (state.az_req-state.az_rep > az_tracking_band and state.above_mask):
+                        for_az()
+                    if (state.az_req-state.az_rep < az_tracking_band and state.above_mask):
+                        rev_az()
 
             if el_active:
                 if (not state.above_mask):
@@ -313,7 +314,7 @@ def check_state(): # Check the state and whether target is achieved
                     if (state.el_stat == 'x'): # Only for the goto command finish automatically (no tracking)
                         state.el_stat = 'f'
                         state.manual_mode = True
-                else:
+                else: # order is very important otherwise start/stop
                     if (state.el_req-state.el_rep > el_tracking_band and state.above_mask):
                         for_el()
                     if (state.el_req-state.el_rep < el_tracking_band and state.above_mask):
