@@ -15,11 +15,12 @@ from motor_control_nopwm import *
 from astronomical import *
 from read_heading import *
 
-az_active = True # Azimuth motors activated?
+az_active = False # Azimuth motors activated?
 az_sense_active = False # Azimuth sensors activated?
+az_tracking_band = 3 # Tracking band in [deg]
 el_active = True # Elevation motors activated?
 el_sense_active = True # Elevation sensors activated?
-tracking_band = 3 # Tracking band in [deg]
+el_tracking_band = 0.3 # Tracking band in [deg]
 
 class Config:
 
@@ -30,10 +31,10 @@ class Config:
    bias_az = -20 # deg
    bias_el = 57.9 # deg
 
-   mask = [0,90,90,90,90,0] # sectorials from 0 to 360 in deg
+   mask = [0,0,0,0,0,0] # sectorials from 0 to 360 in deg
 
-   goto_az = 350 # deg from 0 to 360
-   goto_el = 80 # deg
+   goto_az = 50 # deg from 0 to 360
+   goto_el = 45 # deg
 
    goto_ra = 5.5 # hours decimal
    goto_dec = 22.0 # deg decimal
@@ -44,13 +45,16 @@ class Config:
 class State:
 
     az_req = 10 # deg
-    el_req = 90 # deg
+    el_req = 50 # deg
 
     az_rep = 185 # deg
     el_rep = 85 # deg
 
     az_stat = 'r'
     el_stat = 'f'
+
+    az_false_reading = False
+    el_false_reading = False
 
     motor_az_pins = [0,0]
     motor_el_pins = [0,0]
@@ -138,9 +142,9 @@ def init_screen(stdscr):
 
     string = "Lat rotor: {:.2f} [deg N]".format(conf.rotor_lat)[:width-1]
     stdscr.addstr(11, check_start_middle(width,string),string)
-    string = "Lon rotor: {:.2f} [deg N]".format(conf.rotor_lon)[:width-1]
+    string = "Lon rotor: {:.2f} [deg E]".format(conf.rotor_lon)[:width-1]
     stdscr.addstr(12, check_start_middle(width,string),string)
-    string = "Alt rotor: {:.2f} [deg N]".format(conf.rotor_alt)[:width-1]
+    string = "Alt rotor: {:.2f} [m]".format(conf.rotor_alt)[:width-1]
     stdscr.addstr(13, check_start_middle(width,string),string)
     string = "Bias AZ sensor: {:.2f} [deg]".format(conf.bias_az)[:width-1]
     stdscr.addstr(14, check_start_middle(width,string),string)
@@ -172,14 +176,20 @@ def update_screen(stdscr):
 
     if az_active:
         stdscr.addstr(20, 26, "{:6.1f}".format(state.az_req)[:width-1],curses.color_pair(5)+curses.A_BOLD)
-        stdscr.addstr(20, 42, "{:6.1f}".format(state.az_rep)[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        if state.az_false_reading:
+            stdscr.addstr(20, 41, "{:6.1f}".format(state.az_rep)[:width-1],curses.color_pair(2)+curses.A_BOLD)
+        else:
+            stdscr.addstr(20, 41, "{:6.1f}".format(state.az_rep)[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(20, 57, "{}".format(state.az_stat)[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(20, 64, "{} ".format(str(not state.above_mask))[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(20, 72, "{} ".format(str(state.motor_az_pins))[:width-1],curses.color_pair(5)+curses.A_BOLD)
 
     if el_active:
         stdscr.addstr(21, 26, "{:6.1f}".format(state.el_req)[:width-1],curses.color_pair(5)+curses.A_BOLD)
-        stdscr.addstr(21, 42, "{:6.1f}".format(state.el_rep)[:width-1],curses.color_pair(5)+curses.A_BOLD)
+        if state.el_false_reading:
+            stdscr.addstr(21, 41, "{:6.1f}".format(state.el_rep)[:width-1],curses.color_pair(2)+curses.A_BOLD)
+        else:
+            stdscr.addstr(21, 41, "{:6.1f}".format(state.el_rep)[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(21, 57, "{}".format(state.el_stat)[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(21, 64, "{} ".format(str(not state.above_mask))[:width-1],curses.color_pair(5)+curses.A_BOLD)
         stdscr.addstr(21, 72, "{} ".format(str(state.motor_el_pins))[:width-1],curses.color_pair(5)+curses.A_BOLD)
@@ -285,11 +295,11 @@ def check_state(): # Check the state and whether target is achieved
             if az_active:
                 if (not state.above_mask):
                     stop_az()
-                if (state.az_req-state.az_rep > tracking_band and state.above_mask):
+                if (state.az_req-state.az_rep > az_tracking_band and state.above_mask):
                     for_az()
-                if (state.az_req-state.az_rep < tracking_band and state.above_mask):
+                if (state.az_req-state.az_rep < az_tracking_band and state.above_mask):
                     rev_az()
-                if (abs(state.az_req-state.az_rep) < tracking_band) :
+                if (abs(state.az_req-state.az_rep) < az_tracking_band) :
                     stop_az()
                     if (state.az_stat == 'x'): # Only for the goto command finish automatically (no tracking)
                         state.az_stat = 'r'
@@ -298,27 +308,31 @@ def check_state(): # Check the state and whether target is achieved
             if el_active:
                 if (not state.above_mask):
                     stop_el()
-                if (state.el_req-state.el_rep > tracking_band and state.above_mask):
-                    for_el()
-                if (state.el_req-state.el_rep < tracking_band and state.above_mask):
-                    rev_el()
-                if (abs(state.el_req-state.el_rep) < tracking_band) :
+                if (abs(state.el_req-state.el_rep) < el_tracking_band) :
                     stop_el()
                     if (state.el_stat == 'x'): # Only for the goto command finish automatically (no tracking)
                         state.el_stat = 'f'
                         state.manual_mode = True
+                else:
+                    if (state.el_req-state.el_rep > el_tracking_band and state.above_mask):
+                        for_el()
+                    if (state.el_req-state.el_rep < el_tracking_band and state.above_mask):
+                        rev_el()
+
 
 def read_sensor():
 
     global conf,stat
         
     if az_sense_active:
-        false_reading,angle = read_az_ang() # Read azimuth sensor output
-        if not false_reading:
+        state.az_false_reading,angle = read_az_ang() # Read azimuth sensor output
+        if not state.az_false_reading:
             state.az_rep = angle - conf.bias_az
     if el_sense_active:
-        state.el_rep = read_el_ang() - conf.bias_el # Read azimuth sensor output
-
+        state.el_false_reading,angle = read_el_ang()
+        if not state.el_false_reading:
+            state.el_rep = angle - conf.bias_el # Read elevation sensor output
+  
 def mainloop(stdscr):
 
     global k,conf,state

@@ -12,7 +12,7 @@ bus_number = 1
 address_az = 0x40
 address_el = 0x41
 resolution = 16384.0
-len_avg    = 30
+len_avg    = 50
 
 def mean_angle(angles,weights=0,setting='degrees'):
     '''computes the mean angle'''
@@ -57,18 +57,19 @@ def read_az_mag():
         return (buffer[2]<<6)+(buffer[3]&0x3F)
 
 def read_el_ang():
+    false_reading = False
     for i in range(len_avg):
         for j in range(6):
           try:
               buffer[j] = bus.read_byte_data(address_el, 0xFA+j)
           except:
-              dum=0
+              false_reading = True
         AGC_el       = buffer[0]
         MAG_el       = (buffer[2]<<6)+(buffer[3]&0x3F)
         ANG_el       = (buffer[4]<<6)+(buffer[5]&0x3F)
         angle_el     = ANG_el/resolution*360
         angles_el[i] = angle_el
-    return mean_angle(angles_el,0,'degrees')
+    return false_reading,mean_angle(angles_el,0,'degrees')
 
 def read_el_mag():
     for j in range(6):
