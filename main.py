@@ -15,12 +15,12 @@ from motor_control_nopwm import *
 from astronomical import *
 from read_heading import *
 
-az_active = False # Azimuth motors activated?
-az_sense_active = False # Azimuth sensors activated?
-az_tracking_band = 3 # Tracking band in [deg]
+az_active = True # Azimuth motors activated?
+az_sense_active = True # Azimuth sensors activated?
+az_tracking_band = 2 # Tracking band in [deg]
 el_active = True # Elevation motors activated?
 el_sense_active = True # Elevation sensors activated?
-el_tracking_band = 0.3 # Tracking band in [deg]
+el_tracking_band = 0.5 # Tracking band in [deg]
 
 class Config:
 
@@ -31,7 +31,7 @@ class Config:
    bias_az = -20 # deg
    bias_el = 57.9 # deg
 
-   mask = [0,0,0,0,0,0] # sectorials from 0 to 360 in deg
+   mask = [25,25,90,90,25,25] # sectorials from 0 to 360 in deg
 
    goto_az = 50 # deg from 0 to 360
    goto_el = 45 # deg
@@ -295,11 +295,10 @@ def check_state(): # Check the state and whether target is achieved
             if az_active:
                 if (not state.above_mask):
                     stop_az()
-                if (abs(state.az_req-state.az_rep) < az_tracking_band) :
+                if (abs(state.az_req-state.az_rep) < az_tracking_band):
                     stop_az()
                     if (state.az_stat == 'x'): # Only for the goto command finish automatically (no tracking)
                         state.az_stat = 'r'
-                        state.manual_mode = True
                 else: # order is very important otherwise start/stop
                     if (state.az_req-state.az_rep > az_tracking_band and state.above_mask):
                         for_az()
@@ -313,7 +312,6 @@ def check_state(): # Check the state and whether target is achieved
                     stop_el()
                     if (state.el_stat == 'x'): # Only for the goto command finish automatically (no tracking)
                         state.el_stat = 'f'
-                        state.manual_mode = True
                 else: # order is very important otherwise start/stop
                     if (state.el_req-state.el_rep > el_tracking_band and state.above_mask):
                         for_el()
@@ -329,6 +327,7 @@ def read_sensor():
         state.az_false_reading,angle = read_az_ang() # Read azimuth sensor output
         if not state.az_false_reading:
             state.az_rep = angle - conf.bias_az
+
     if el_sense_active:
         state.el_false_reading,angle = read_el_ang()
         if not state.el_false_reading:
