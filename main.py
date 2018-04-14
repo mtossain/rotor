@@ -20,7 +20,7 @@ az_sense_active = True # Azimuth sensors activated?
 az_tracking_band = 2 # Tracking band in [deg]
 el_active = True # Elevation motors activated?
 el_sense_active = True # Elevation sensors activated?
-el_tracking_band = 0.5 # Tracking band in [deg]
+el_tracking_band = 0.3 # Tracking band in [deg]
 
 class Config:
 
@@ -28,10 +28,10 @@ class Config:
    rotor_lon = 5.03625 # deg E
    rotor_alt = 4 # m
 
-   bias_az = -20 # deg
-   bias_el = 57.9 # deg
+   bias_az = 2.0 # deg
+   bias_el = 58.9 # deg
 
-   mask = [25,25,90,90,25,25] # sectorials from 0 to 360 in deg
+   mask = [25,25,25,25,25,25] # sectorials from 0 to 360 in deg
 
    goto_az = 50 # deg from 0 to 360
    goto_el = 45 # deg
@@ -39,7 +39,7 @@ class Config:
    goto_ra = 5.5 # hours decimal
    goto_dec = 22.0 # deg decimal
 
-   track_planet = 'Moon' # planet in capital or small
+   track_planet = 'Sun' # planet in capital or small
    track_sat_tle = 'tle.txt' # file with TLE elements, first one taken
 
 class State:
@@ -65,6 +65,10 @@ class State:
 k=0
 conf = Config() # Get the configuration of the tool
 state = State() # Get the initial state of the rotor
+
+def convert_az_reading(angle):
+    # Takes an angle from -180 to 180 and converts to proper 0-360 CW
+    return 360 - (angle)
 
 def check_start_middle(width,str):
     return int((width // 2) - (len(str) // 2) - len(str) % 2)
@@ -318,7 +322,6 @@ def check_state(): # Check the state and whether target is achieved
                     if (state.el_req-state.el_rep < el_tracking_band and state.above_mask):
                         rev_el()
 
-
 def read_sensor():
 
     global conf,stat
@@ -326,7 +329,7 @@ def read_sensor():
     if az_sense_active:
         state.az_false_reading,angle = read_az_ang() # Read azimuth sensor output
         if not state.az_false_reading:
-            state.az_rep = angle - conf.bias_az
+            state.az_rep = (convert_az_reading(angle) - conf.bias_az)%360 # Convert for AMS5048 readings
 
     if el_sense_active:
         state.el_false_reading,angle = read_el_ang()
