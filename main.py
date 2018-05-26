@@ -26,12 +26,12 @@ class Config:
    rotor_lon = 5.03625 # deg E
    rotor_alt = 4 # m
 
-   bias_az = 2.0 # deg
+   bias_az = -22.0 # deg
    bias_el = 58.9 # deg
 
-   mask = [25,25,25,25,25,25] # sectorials from 0 to 360 in deg
+   mask = [90,90,15,15,15,15] # sectorials from 0 to 360 in deg
 
-   goto_az = 50 # deg from 0 to 360
+   goto_az = 0 # deg from 0 to 360
    goto_el = 45 # deg
 
    goto_ra = 5.5 # hours decimal
@@ -222,6 +222,8 @@ def check_command():
             stop_az()
             state.az_stat = 'r'
             state.manual_mode = True
+            state.above_mask = True
+            state.az_req = 0
         if (k == ord('t')):
             for_az()
             state.az_stat = 't'
@@ -257,6 +259,8 @@ def check_command():
             stop_el()
             state.el_stat = 'f'
             state.manual_mode = True
+            state.above_mask = True
+            state.el_req = 90
         if (k == ord('g')):
             for_el()
             state.el_stat = 'g'

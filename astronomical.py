@@ -32,7 +32,7 @@ def compute_azel_from_planet(config):
     home.lon = str(config.rotor_lon)  # +E
     home.lat = str(config.rotor_lat) # +N
     home.elevation = config.rotor_alt # meters
-    home.date = dt.datetime.utcnow()
+    home.date = dt.datetime.utcnow() #+dt.timedelta(hours=14)
 
     if config.track_planet.lower() == 'sun':
         planet = ephem.Sun(home)
