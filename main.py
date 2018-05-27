@@ -29,7 +29,7 @@ class Config:
    bias_az = -32.0 # deg
    bias_el = 58.9 # deg
 
-   mask = [90,90,15,15,15,15] # sectorials from 0 to 360 in deg
+   mask = [90,90,90,90,90,15,15,15,15,15,15,15] # sectorials from 0 to 360 in deg
 
    goto_az = 0 # deg from 0 to 360
    goto_el = 45 # deg
@@ -37,7 +37,7 @@ class Config:
    goto_ra = 5.5 # hours decimal
    goto_dec = 22.0 # deg decimal
 
-   track_planet = 'Moon' # planet in capital or small
+   track_planet = 'Sun' # planet in capital or small
    track_sat_tle = 'tle.txt' # file with TLE elements, first one taken
 
 class State:
