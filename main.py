@@ -13,8 +13,8 @@ from motor_control_nopwm import *
 from astronomical import *
 from read_heading import *
 
-az_active = True # Azimuth motors activated?
-az_sense_active = True # Azimuth sensors activated?
+az_active = False # Azimuth motors activated?
+az_sense_active = False # Azimuth sensors activated?
 az_tracking_band = 2 # Tracking band in [deg]
 el_active = True # Elevation motors activated?
 el_sense_active = True # Elevation sensors activated?
