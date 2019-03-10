@@ -7,6 +7,7 @@ import sys,os
 import curses
 import datetime
 import math
+import urllib2
 
 #from motor_control import * # PWM was tested but failed completely
 from motor_control_nopwm import *
@@ -19,6 +20,7 @@ az_tracking_band = 2 # Tracking band in [deg]
 el_active = True # Elevation motors activated?
 el_sense_active = True # Elevation sensors activated?
 el_tracking_band = 0.3 # Tracking band in [deg]
+wind_check = True # Checking wind gust
 
 class Config:
 
@@ -29,7 +31,7 @@ class Config:
    bias_az = -32.0 # deg
    bias_el = 58.9 # deg
 
-   mask = [90,90,90,90,90,15,15,15,15,15,15,15] # sectorials from 0 to 360 in deg
+   mask = [15,15,15,15,15,15,15] # sectorials from 0 to 360 in deg
 
    goto_az = 0 # deg from 0 to 360
    goto_el = 45 # deg
@@ -39,6 +41,8 @@ class Config:
 
    track_planet = 'Sun' # planet in capital or small
    track_sat_tle = 'tle.txt' # file with TLE elements, first one taken
+
+   max_wind_gust = 0 # When wind gust exceed point to zenith
 
 class State:
 
@@ -65,12 +69,31 @@ conf = Config() # Get the configuration of the tool
 state = State() # Get the initial state of the rotor
 
 def convert_az_reading(angle): # Takes an angle from -180 to 180 and converts to proper 0-360 CW
-
     return 360 - (angle)
 
 def check_start_middle(width,str): # Get the middle of the screen
-
     return int((width // 2) - (len(str) // 2) - len(str) % 2)
+
+def check_wind():
+
+    f = urllib2.urlopen('http://api.wunderground.com/api/c76852885ada6b8a/conditions/q/Ijsselstein.json')
+    json_string = f.read()
+    parsed_json = json.loads(json_string)
+    station_time = parse(parsed_json['current_observation']['observation_time_rfc822']).replace(tzinfo=None)
+    now = dt.datetime.now()
+    seconds = (now-station_time).total_seconds()
+    if seconds > 10*60:
+        print('ERROR: Wunderground is not updated since: '+str(int(seconds/60))+'min [NOK]')
+    Wind = int(float(parsed_json['current_observation']['wind_kph']))
+    WindGust = int(float(parsed_json['current_observation']['wind_gust_kph']))
+    WindDir = parsed_json['current_observation']['wind_dir']
+    WindDirAngle = int(float(parsed_json['current_observation']['wind_degrees']))
+    return WindGust
+
+def check_night():
+
+    now = dt.datetime.now()
+    seconds = (now-station_time).total_seconds()
 
 def check_motor_pins(): # Check the status of the motor pins external to the program
 
@@ -289,6 +312,7 @@ def check_state(): # Check the state and whether target is achieved
 
     check_above_mask() # Check whether pointing target is above the mask
 
+
     if state.manual_mode == False: # Checking only needed for non manual modes
 
         # Update the pointing target
@@ -304,13 +328,16 @@ def check_state(): # Check the state and whether target is achieved
 
         check_above_mask() # Check whether pointing target is above the mask
 
+        if(wind_check and check_wind()>state.max_wind_gust): # If wind is too strong then go into safe mode at 90 elevation
+            state.el_req=90
+
         # Update movement of motors
         if az_active:
             if (not state.above_mask):
                 stop_az()
             if (abs(state.az_req-state.az_rep) < az_tracking_band):
                 stop_az()
-                if (state.az_stat == 'x'): # Only for the goto command finish automatically (no tracking)
+                if (state.az_stat == 'x'): # Only for the goto/wind command finish automatically (no tracking)
                     state.az_stat = 'r'
             else: # order is very important otherwise start/stop
                 if (state.az_req-state.az_rep > az_tracking_band and state.above_mask):
@@ -320,10 +347,10 @@ def check_state(): # Check the state and whether target is achieved
 
         if el_active:
             if (not state.above_mask):
-                stop_el()
+                state.el_req=90 # If under mask, then point to zenith
             if (abs(state.el_req-state.el_rep) < el_tracking_band) :
                 stop_el()
-                if (state.el_stat == 'x'): # Only for the goto command finish automatically (no tracking)
+                if (state.el_stat == 'x'): # Only for the goto/wind command finish automatically (no tracking)
                     state.el_stat = 'f'
             else: # order is very important otherwise start/stop
                 if (state.el_req-state.el_rep > el_tracking_band and state.above_mask):
