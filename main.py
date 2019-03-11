@@ -120,7 +120,7 @@ def check_above_mask(): # Check whether requested target is abovet the mask
 
     step_mask = 360/len(conf.mask)
 
-    az_idx = int(state.az_req)/int(step_mask) # integer division
+    az_idx = int(int(state.az_req)/int(step_mask)) # integer division
 
     if state.el_req>conf.mask[az_idx]:
     	state.above_mask = True
