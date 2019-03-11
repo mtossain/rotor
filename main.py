@@ -366,9 +366,9 @@ def check_state(): # Check the state and whether target is achieved
                 if (state.el_stat == 'x'): # Only for the goto/wind command finish automatically (no tracking)
                     state.el_stat = 'f'
             else: # order is very important otherwise start/stop
-                if (state.el_req-state.el_rep > el_tracking_band and state.above_mask):
+                if (state.el_req-state.el_rep > el_tracking_band):
                     for_el()
-                if (state.el_req-state.el_rep < el_tracking_band and state.above_mask):
+                if (state.el_req-state.el_rep < el_tracking_band):
                     rev_el()
 
 def read_sensor():
