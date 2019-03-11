@@ -65,7 +65,9 @@ class State:
 
     above_mask = True # Whether pointing target is above or below the set mask
     manual_mode = True # Whether a manual mode or tracking mode command is given
-    wind_gust = False # Whether there is too much wind
+
+    wind_gust = 0 #kph
+    wind_gust_flag = False # Whether there is too much wind
 
 k=0 # Keypress numeric value
 conf = Config() # Get the configuration of the tool
@@ -205,7 +207,8 @@ def update_screen(stdscr):
     stdscr.addstr(height-1, check_start_middle(width,statusbarstr), statusbarstr,curses.color_pair(3)) # Render status bar
 
     check_motor_pins()
-    if state.wind_gust:
+
+    if state.wind_gust_flag:
         stdscr.addstr(17, 29, "Wind Speed Gust {} ".format(state.wind_gust)[:width-1],curses.color_pair(2)+curses.A_BOLD)
     else:
         stdscr.addstr(17, 29, "Wind Speed Gust {} ".format(state.wind_gust)[:width-1])
@@ -338,11 +341,12 @@ def check_state(): # Check the state and whether target is achieved
 
         check_above_mask() # Check whether pointing target is above the mask
 
-        if(wind_check and check_wind()>conf.max_wind_gust): # If wind is too strong then go into safe mode at 90 elevation
+        state.wind_gust = check_wind()
+        if(wind_check and state.wind_gust>conf.max_wind_gust): # If wind is too strong then go into safe mode at 90 elevation
             state.el_req=90
-            state.wind_gust = True
+            state.wind_gust_flag = True
         else:
-            state.wind_gust = False
+            state.wind_gust_flag = False
 
         # Update movement of motors
         if az_active:
