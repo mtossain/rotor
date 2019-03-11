@@ -9,7 +9,7 @@ import datetime
 import math
 import json
 from dateutil.parser import *
-import urllib.request
+import urllib2
 
 #from motor_control import * # PWM was tested but failed completely
 from motor_control_nopwm import *
@@ -44,7 +44,7 @@ class Config:
    track_planet = 'Sun' # planet in capital or small
    track_sat_tle = 'tle.txt' # file with TLE elements, first one taken
 
-   max_wind_gust = 8 # When wind gust exceed point to zenith
+   max_wind_gust = 6 # When wind gust exceed point to zenith
 
 class State:
 
@@ -82,10 +82,7 @@ def check_start_middle(width,str): # Get the middle of the screen
 def check_wind():
 
     try:
-        try:
-            f = urllib.request.urlopen('http://api.wunderground.com/api/c76852885ada6b8a/conditions/q/Ijsselstein.json')
-        except:
-            print('[NOK] Could not open Wunderground website')
+        f = urllib2.urlopen('http://api.wunderground.com/api/c76852885ada6b8a/conditions/q/Ijsselstein.json')
         json_string = f.read()
         parsed_json = json.loads(json_string)
         Wind = int(float(parsed_json['current_observation']['wind_kph']))
@@ -93,8 +90,8 @@ def check_wind():
         WindDir = parsed_json['current_observation']['wind_dir']
         WindDirAngle = int(float(parsed_json['current_observation']['wind_degrees']))
     except:
-        print('[NOK] Wunderground not found...')
-        WindGust=0
+        #print('[NOK] Wunderground not found...')
+        WindGust=99
     return WindGust
 
 def check_night():
