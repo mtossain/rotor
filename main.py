@@ -82,7 +82,7 @@ def check_start_middle(width,str): # Get the middle of the screen
 def check_wind():
 
     try:
-        f = urllib2.urlopen('http://api.wunderground.com/api/c76852885ada6b8a/conditions/q/pws:Ijsselstein.json')
+        f = urllib2.urlopen('http://http://api.wunderground.com/api/c76852885ada6b8a/conditions/q/Ijsselstein.json')
         json_string = f.read()
         parsed_json = json.loads(json_string)
         station_time = parse(parsed_json['current_observation']['observation_time_rfc822']).replace(tzinfo=None)
