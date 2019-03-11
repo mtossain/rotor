@@ -8,6 +8,8 @@ import curses
 import datetime
 import math
 import urllib2
+import json
+from dateutil.parser import *
 
 #from motor_control import * # PWM was tested but failed completely
 from motor_control_nopwm import *
@@ -31,10 +33,10 @@ class Config:
    bias_az = -32.0 # deg
    bias_el = 58.9 # deg
 
-   mask = [15,15,15,15,15,15,15] # sectorials from 0 to 360 in deg
+   mask = [15,15,15,15] # sectorials from 0 to 360 in deg
 
    goto_az = 0 # deg from 0 to 360
-   goto_el = 45 # deg
+   goto_el = 90 # deg from 0 (hor) to 90 (zenith)
 
    goto_ra = 5.5 # hours decimal
    goto_dec = 22.0 # deg decimal
@@ -42,7 +44,7 @@ class Config:
    track_planet = 'Sun' # planet in capital or small
    track_sat_tle = 'tle.txt' # file with TLE elements, first one taken
 
-   max_wind_gust = 0 # When wind gust exceed point to zenith
+   max_wind_gust = 8 # When wind gust exceed point to zenith
 
 class State:
 
@@ -63,6 +65,7 @@ class State:
 
     above_mask = True # Whether pointing target is above or below the set mask
     manual_mode = True # Whether a manual mode or tracking mode command is given
+    wind_gust = False # Whether there is too much wind
 
 k=0 # Keypress numeric value
 conf = Config() # Get the configuration of the tool
@@ -76,18 +79,21 @@ def check_start_middle(width,str): # Get the middle of the screen
 
 def check_wind():
 
-    f = urllib2.urlopen('http://api.wunderground.com/api/c76852885ada6b8a/conditions/q/Ijsselstein.json')
-    json_string = f.read()
-    parsed_json = json.loads(json_string)
-    station_time = parse(parsed_json['current_observation']['observation_time_rfc822']).replace(tzinfo=None)
-    now = dt.datetime.now()
-    seconds = (now-station_time).total_seconds()
-    if seconds > 10*60:
-        print('ERROR: Wunderground is not updated since: '+str(int(seconds/60))+'min [NOK]')
-    Wind = int(float(parsed_json['current_observation']['wind_kph']))
-    WindGust = int(float(parsed_json['current_observation']['wind_gust_kph']))
-    WindDir = parsed_json['current_observation']['wind_dir']
-    WindDirAngle = int(float(parsed_json['current_observation']['wind_degrees']))
+    try:
+        f = urllib2.urlopen('http://api.wunderground.com/api/c76852885ada6b8a/conditions/q/pws:IIJSSELS41.json')
+        json_string = f.read()
+        parsed_json = json.loads(json_string)
+        station_time = parse(parsed_json['current_observation']['observation_time_rfc822']).replace(tzinfo=None)
+        now = dt.datetime.now()
+        seconds = (now-station_time).total_seconds()
+        if seconds > 10*60:
+            print('ERROR: Wunderground is not updated since: '+str(int(seconds/60))+'min [NOK]')
+        Wind = int(float(parsed_json['current_observation']['wind_kph']))
+        WindGust = int(float(parsed_json['current_observation']['wind_gust_kph']))
+        WindDir = parsed_json['current_observation']['wind_dir']
+        WindDirAngle = int(float(parsed_json['current_observation']['wind_degrees']))
+    except:
+        WindGust=0
     return WindGust
 
 def check_night():
@@ -199,6 +205,10 @@ def update_screen(stdscr):
     stdscr.addstr(height-1, check_start_middle(width,statusbarstr), statusbarstr,curses.color_pair(3)) # Render status bar
 
     check_motor_pins()
+    if state.wind_gust:
+        stdscr.addstr(17, 29, "Wind Speed Gust {} ".format(state.wind_gust)[:width-1],curses.color_pair(2)+curses.A_BOLD)
+    else:
+        stdscr.addstr(17, 29, "Wind Speed Gust {} ".format(state.wind_gust)[:width-1])
 
     if az_active:
         stdscr.addstr(20, 26, "{:6.1f}".format(state.az_req)[:width-1],curses.color_pair(5)+curses.A_BOLD)
@@ -328,8 +338,11 @@ def check_state(): # Check the state and whether target is achieved
 
         check_above_mask() # Check whether pointing target is above the mask
 
-        if(wind_check and check_wind()>state.max_wind_gust): # If wind is too strong then go into safe mode at 90 elevation
+        if(wind_check and check_wind()>conf.max_wind_gust): # If wind is too strong then go into safe mode at 90 elevation
             state.el_req=90
+            state.wind_gust = True
+        else:
+            state.wind_gust = False
 
         # Update movement of motors
         if az_active:
