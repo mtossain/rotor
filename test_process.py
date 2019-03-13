@@ -1,4 +1,6 @@
 from multiprocessing import Process, Value, Array
+from read_heading import *
+import time
 
 def read_az(azimuth,bias):
     false_reading,angle = read_az_ang()
