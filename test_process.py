@@ -20,7 +20,7 @@ if __name__ == '__main__':
     elevation = Value('d', 0.0) # shared between processes
 
     p1 = Process(target=read_az, args=(azimuth,55))
-    p2 = Process(target=read_el, args=(el,55))
+    p2 = Process(target=read_el, args=(elevation,55))
 
     #p1.start()
     p2.start()
