@@ -89,6 +89,7 @@ def check_wind():
         time.sleep(1)
 
 if __name__ == '__main__':
+    manager = Manager() # share the dictionaries by a manager
 
     k=0 # Keypress numeric value
     conf = Config() # Get the configuration of the tool
