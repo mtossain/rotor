@@ -1,4 +1,4 @@
-import Process, Manager
+from multiprocessing import Process, Manager
 from read_heading import *
 import time
 
