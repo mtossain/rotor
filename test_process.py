@@ -353,12 +353,8 @@ def check_state(): # Check the state and whether target is achieved
 
         check_above_mask() # Check whether pointing target is above the mask
 
-        state.wind_gust = check_wind()
         if(wind_check and state.wind_gust>conf.max_wind_gust): # If wind is too strong then go into safe mode at 90 elevation
             state.el_req=90
-            state.wind_gust_flag = True
-        else:
-            state.wind_gust_flag = False
 
         # Update movement of motors
         if az_active:
@@ -403,6 +399,10 @@ def read_sensor(d):
 
     if wind_check:
         state.wind_gust = d['WindGust']
+        if state.wind_gust>conf.max_wind_gust: # If wind is too strong then go into safe mode at 90 elevation
+            state.wind_gust_flag = True
+        else:
+            state.wind_gust_flag = False
 
 def mainloop(stdscr):
     global k,conf,state
