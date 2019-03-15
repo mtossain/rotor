@@ -446,11 +446,11 @@ def mainloop(stdscr):
         k = stdscr.getch() # Get next user input
 
     if az_sense_active:
-        p1.join()
+        p1.terminate()
     if el_sense_active:
-        p2.join()
+        p2.terminate()
     if wind_check:
-        p3.join()
+        p3.terminate()
 
 
 def main():
