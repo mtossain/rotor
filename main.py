@@ -1,3 +1,8 @@
+###############################################################################
+# Program to control rotor for dish, antenna or other pointing purpose
+# v1 2018, M. Tossaint, For SETI application and 3m dish
+# v2 2019, M. Tossaint, For Solar Panel steering to Sun
+###############################################################################
 from multiprocessing import Process, Manager
 import time
 import sys,os
@@ -7,21 +12,12 @@ import math
 import json
 from dateutil.parser import *
 import urllib2
-import smooth
 
 #from motor_control import * # PWM was tested but failed completely
+import smooth
 from motor_control_nopwm import *
 from astronomical import *
 from read_heading import *
-
-az_active = False # Azimuth motors activated?
-az_sense_active = False # Azimuth sensors activated?
-az_tracking_band = 2 # Tracking band in [deg]
-el_active = True # Elevation motors activated?
-el_sense_active = True # Elevation sensors activated?
-el_tracking_band = 0.3 # Tracking band in [deg]
-wind_check = True # Checking wind gust
-
 
 class Config:
 
@@ -43,8 +39,18 @@ class Config:
    track_planet = 'Sun' # planet in capital or small
    track_sat_tle = 'tle.txt' # file with TLE elements, first one taken
 
-   max_wind_gust = 6 # When wind gust exceed point to zenith
+   az_active = False # Azimuth motors activated?
+   az_sense_active = False # Azimuth sensors activated?
+   az_tracking_band = 2 # Tracking band in [deg]
+
+   el_active = True # Elevation motors activated?
+   el_sense_active = True # Elevation sensors activated?
+   el_tracking_band = 0.3 # Tracking band in [deg]
    el_min = 45 # minimum angle that elevation can go to
+
+   max_wind_gust = 6 # When wind gust exceed point to zenith
+   wind_check = True # Checking wind gust
+
 
 class State:
 
@@ -102,7 +108,7 @@ def check_above_mask(): # Check whether requested target is abovet the mask
 
 def update_screen(stdscr):
 
-   global state
+   global conf,state
 
    height, width = stdscr.getmaxyx() # Get the dimensions of the terminal
 
@@ -116,7 +122,7 @@ def update_screen(stdscr):
    else:
        stdscr.addstr(17, 29, "Wind Speed Gust {} ".format(state.wind_gust)[:width-1])
 
-   if az_active:
+   if conf.az_active:
        stdscr.addstr(20, 26, "{:6.1f}".format(state.az_req)[:width-1],curses.color_pair(5)+curses.A_BOLD)
        if state.az_false_reading:
            stdscr.addstr(20, 41, "{:6.1f}".format(state.az_rep)[:width-1],curses.color_pair(2)+curses.A_BOLD)
@@ -129,7 +135,7 @@ def update_screen(stdscr):
            stdscr.addstr(20, 64, "{} ".format(str(not state.above_mask))[:width-1],curses.color_pair(2)+curses.A_BOLD)
        stdscr.addstr(20, 72, "{} ".format(str(state.motor_az_pins))[:width-1],curses.color_pair(5)+curses.A_BOLD)
 
-   if el_active:
+   if conf.el_active:
        stdscr.addstr(21, 26, "{:6.1f}".format(state.el_req)[:width-1],curses.color_pair(5)+curses.A_BOLD)
        if state.el_false_reading:
            stdscr.addstr(21, 41, "{:6.1f}".format(state.el_rep)[:width-1],curses.color_pair(2)+curses.A_BOLD)
@@ -146,9 +152,9 @@ def update_screen(stdscr):
 
 def check_command():
 
-   global k,state
+   global k,conf,state
 
-   if az_active: # Manual activation azimuth
+   if conf.az_active: # Manual activation azimuth
        if (k == ord('w')):
            rev_az()
            state.az_stat = 'w'
@@ -185,7 +191,7 @@ def check_command():
            state.az_stat = 'v'
            state.manual_mode = False
 
-   if el_active: # Manual activation elevation
+   if conf.el_active: # Manual activation elevation
        if (k == ord('s')):
            rev_el()
            state.el_stat = 's'
@@ -358,36 +364,36 @@ def check_state(): # Check the state and whether target is achieved
 
         check_above_mask() # Check whether pointing target is above the mask
 
-        if(wind_check and state.wind_gust>conf.max_wind_gust): # If wind is too strong then go into safe mode at 90 elevation
+        if(conf.wind_check and state.wind_gust>conf.max_wind_gust): # If wind is too strong then go into safe mode at 90 elevation
             state.el_req=90
 
         # Update movement of motors
-        if az_active:
+        if conf.az_active:
             if (not state.above_mask):
                 stop_az()
-            if (abs(state.az_req-state.az_rep) < az_tracking_band):
+            if (abs(state.az_req-state.az_rep) < conf.az_tracking_band):
                 stop_az()
                 if (state.az_stat == 'x'): # Only for the goto/wind command finish automatically (no tracking)
                     state.az_stat = 'r'
             else: # order is very important otherwise start/stop
-                if (state.az_req-state.az_rep > az_tracking_band and state.above_mask):
+                if (state.az_req-state.az_rep > conf.az_tracking_band and state.above_mask):
                     for_az()
-                if (state.az_req-state.az_rep < az_tracking_band and state.above_mask):
+                if (state.az_req-state.az_rep < conf.az_tracking_band and state.above_mask):
                     rev_az()
 
-        if el_active:
+        if conf.el_active:
             if (not state.above_mask):
                 state.el_req=90 # If under mask, then point to zenith
             if state.el_req<conf.el_min:
                 state.el_req=conf.el_min
-            if (abs(state.el_req-state.el_rep) < el_tracking_band) :
+            if (abs(state.el_req-state.el_rep) < conf.el_tracking_band) :
                 stop_el()
                 if (state.el_stat == 'x'): # Only for the goto/wind command finish automatically (no tracking)
                     state.el_stat = 'f'
             else: # order is very important otherwise start/stop
-                if (state.el_req-state.el_rep > el_tracking_band):
+                if (state.el_req-state.el_rep > conf.el_tracking_band):
                     for_el()
-                if (state.el_req-state.el_rep < el_tracking_band):
+                if (state.el_req-state.el_rep < conf.el_tracking_band):
                     rev_el()
 
 def read_sensor(d):
@@ -396,15 +402,15 @@ def read_sensor(d):
 
     state.el_false_reading = d['el_false_reading']
 
-    if az_sense_active:
+    if conf.az_sense_active:
         state.az_false_reading = d['az_false_reading']
         state.az_rep = d['az_rep']
 
-    if el_sense_active:
+    if conf.el_sense_active:
         state.el_false_reading = d['el_false_reading']
         state.el_rep = d['el_rep']
 
-    if wind_check:
+    if conf.wind_check:
         state.wind_gust = d['WindGust']
         if state.wind_gust>conf.max_wind_gust: # If wind is too strong then go into safe mode at 90 elevation
             state.wind_gust_flag = True
@@ -412,6 +418,7 @@ def read_sensor(d):
             state.wind_gust_flag = False
 
 def mainloop(stdscr):
+
     global k,conf,state
 
     manager = Manager() # share the dictionaries by a manager
@@ -422,26 +429,20 @@ def mainloop(stdscr):
 
     d = manager.dict() # all the shared dictionaries between processes
 
-    
-    d['bias_az'] = conf.bias_az # Need to initialize here to use it in main
+    d['bias_az'] = conf.bias_az
     d['bias_el'] = conf.bias_el
-    #d['az_rep'] = state.az_rep
-    #d['el_rep'] = state.el_rep
-    #d['az_false_reading'] = False
-    #d['el_false_reading'] = False
-    #d['WindGust'] = state.wind_gust
 
-    if az_sense_active:
+    if conf.az_sense_active:
         p1 = Process(target=read_az, args=(d,))
         p1.start()
-    if el_sense_active:
+    if conf.el_sense_active:
         p2 = Process(target=read_el, args=(d,))
         p2.start()
-    if wind_check:
+    if conf.wind_check:
         p3 = Process(target=check_wind, args=(d,))
         p3.start()
 
-    time.sleep(1)
+    time.sleep(1) # Wait for the processes to 'fill' the dictionaries otherwise key errors appear
 
     init_screen(stdscr) # Initialise the screen
 
@@ -457,11 +458,11 @@ def mainloop(stdscr):
 
         k = stdscr.getch() # Get next user input
 
-    if az_sense_active:
+    if conf.az_sense_active:
         p1.terminate()
-    if el_sense_active:
+    if conf.el_sense_active:
         p2.terminate()
-    if wind_check:
+    if conf.wind_check:
         p3.terminate()
 
 
