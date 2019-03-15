@@ -317,8 +317,8 @@ def check_wind(d):
             f = urllib2.urlopen('http://api.wunderground.com/api/c76852885ada6b8a/conditions/q/Ijsselstein.json')
             json_string = f.read()
             parsed_json = json.loads(json_string)
-            Wind = wind_s.add_step(int(float(parsed_json['current_observation']['wind_kph'])))
-            WindGust = wind_gust_s.add_step(int(float(parsed_json['current_observation']['wind_gust_kph'])))
+            Wind = round(wind_s.add_step(int(float(parsed_json['current_observation']['wind_kph']))))
+            WindGust = round(wind_gust_s.add_step(int(float(parsed_json['current_observation']['wind_gust_kph']))))
             #WindDir = parsed_json['current_observation']['wind_dir']
             #WindDirAngle = int(float(parsed_json['current_observation']['wind_degrees']))
         except:
@@ -326,7 +326,7 @@ def check_wind(d):
             f = urllib2.urlopen('http://api.openweathermap.org/data/2.5/weather?q=Ijsselstein&APPID=37c36ad4b5df0e23f93e8cff206e5a2c')
             json_string = f.read()
             parsed_json = json.loads(json_string)
-            Wind = wind_s.add_step(int(float(parsed_json['wind']['speed'])))
+            Wind = round(wind_s.add_step(int(float(parsed_json['wind']['speed']))))
             WindGust = Wind
             #WindDir = 99
             #WindDirAngle = int(float(parsed_json['wind']['deg']))
