@@ -401,6 +401,8 @@ def read_sensor(d):
         state.el_false_reading = d['el_false_reading']
         state.el_rep = d['el_rep']
 
+    if wind_check:
+        state.wind_gust = d['WindGust']
 
 def mainloop(stdscr):
     global k,conf,state
