@@ -445,6 +445,13 @@ def mainloop(stdscr):
 
         k = stdscr.getch() # Get next user input
 
+    if az_sense_active:
+        p1.join()
+    if el_sense_active:
+        p2.join()
+    if wind_check:
+        p3.join()
+
 
 def main():
     curses.wrapper(mainloop)
