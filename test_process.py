@@ -7,6 +7,7 @@ import math
 import json
 from dateutil.parser import *
 import urllib2
+import smooth
 
 #from motor_control import * # PWM was tested but failed completely
 from motor_control_nopwm import *
@@ -307,24 +308,28 @@ def read_el(d):
         time.sleep(.5)
 
 def check_wind(d):
+
+    wind_s = smooth.Smooth(5,10)
+    wind_gust_s = smooth.Smooth(5,10)
+
     while(1):
         try:
             f = urllib2.urlopen('http://api.wunderground.com/api/c76852885ada6b8a/conditions/q/Ijsselstein.json')
             json_string = f.read()
             parsed_json = json.loads(json_string)
-            Wind = int(float(parsed_json['current_observation']['wind_kph']))
-            WindGust = int(float(parsed_json['current_observation']['wind_gust_kph']))
-            WindDir = parsed_json['current_observation']['wind_dir']
-            WindDirAngle = int(float(parsed_json['current_observation']['wind_degrees']))
+            Wind = wind_s.add_step(int(float(parsed_json['current_observation']['wind_kph'])))
+            WindGust = wind_gust_s.add_step(int(float(parsed_json['current_observation']['wind_gust_kph'])))
+            #WindDir = parsed_json['current_observation']['wind_dir']
+            #WindDirAngle = int(float(parsed_json['current_observation']['wind_degrees']))
         except:
             print('Could not use WU, tried OWM')
             f = urllib2.urlopen('http://api.openweathermap.org/data/2.5/weather?q=Ijsselstein&APPID=37c36ad4b5df0e23f93e8cff206e5a2c')
             json_string = f.read()
             parsed_json = json.loads(json_string)
-            Wind = int(float(parsed_json['wind']['speed']))
-            WindGust = 99
-            WindDir = 99
-            WindDirAngle = int(float(parsed_json['wind']['deg']))
+            Wind = wind_s.add_step(int(float(parsed_json['wind']['speed'])))
+            WindGust = Wind
+            #WindDir = 99
+            #WindDirAngle = int(float(parsed_json['wind']['deg']))
 
         d['Wind']=Wind
         d['WindGust']=WindGust
