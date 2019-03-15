@@ -20,7 +20,7 @@ az_tracking_band = 2 # Tracking band in [deg]
 el_active = True # Elevation motors activated?
 el_sense_active = True # Elevation sensors activated?
 el_tracking_band = 0.3 # Tracking band in [deg]
-wind_check = True # Checking wind gust
+wind_check = False # Checking wind gust
 
 
 class Config:
@@ -44,6 +44,7 @@ class Config:
    track_sat_tle = 'tle.txt' # file with TLE elements, first one taken
 
    max_wind_gust = 6 # When wind gust exceed point to zenith
+   el_min = 45 # minimum angle that elevation can go to
 
 class State:
 
@@ -378,6 +379,8 @@ def check_state(): # Check the state and whether target is achieved
         if el_active:
             if (not state.above_mask):
                 state.el_req=90 # If under mask, then point to zenith
+            if state.el_req<conf.el_min:
+                state.el_req=conf.el_min
             if (abs(state.el_req-state.el_rep) < el_tracking_band) :
                 stop_el()
                 if (state.el_stat == 'x'): # Only for the goto/wind command finish automatically (no tracking)
