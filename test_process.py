@@ -1,6 +1,26 @@
 from multiprocessing import Process, Manager
-from read_heading import *
 import time
+import sys,os
+import curses
+import datetime
+import math
+import json
+from dateutil.parser import *
+import urllib2
+
+#from motor_control import * # PWM was tested but failed completely
+from motor_control_nopwm import *
+from astronomical import *
+from read_heading import *
+
+az_active = False # Azimuth motors activated?
+az_sense_active = False # Azimuth sensors activated?
+az_tracking_band = 2 # Tracking band in [deg]
+el_active = True # Elevation motors activated?
+el_sense_active = True # Elevation sensors activated?
+el_tracking_band = 0.3 # Tracking band in [deg]
+wind_check = True # Checking wind gust
+
 
 class Config:
 
@@ -47,28 +67,25 @@ class State:
    wind_gust = 0 #kph
    wind_gust_flag = False # Whether there is too much wind
 
-def read_az(azimuth,bias):
+def read_az(d):
     while (1):
-        false_reading,angle = read_az_ang(d)
+        false_reading,angle = read_az_ang()
         d['az_false_reading'] = True
         if not false_reading:
             d['az_false_reading'] = False
-            d['az_rep'] = round((convert_az_reading(angle) - bias)%360,2)
-            #print(d['az_rep'])
+            d['az_rep'] = round((convert_az_reading(angle) - d['bias_az'])%360,2)
         time.sleep(.5)
 
-
-def read_el():
+def read_el(d):
     while (1):
-        false_reading,angle = read_el_ang(d)
-        d['el_false_reading'] = True
+        false_reading,angle = read_el_ang()
+        d['el_false_reading']=True
         if not false_reading:
             d['el_false_reading'] = False
-            d['el_rep']  = round(angle - bias,2)
-            #print(d['el_rep'])
+            d['el_rep'] = round(angle - d['bias_el'],2)
         time.sleep(.5)
 
-def check_wind():
+def check_wind(d):
     while(1):
         try:
             f = urllib2.urlopen('http://api.wunderground.com/api/c76852885ada6b8a/conditions/q/Ijsselstein.json')
@@ -79,9 +96,15 @@ def check_wind():
             WindDir = parsed_json['current_observation']['wind_dir']
             WindDirAngle = int(float(parsed_json['current_observation']['wind_degrees']))
         except:
-            #print('[NOK] Wunderground not found...')
-            Wind=99
-            WindGust=99
+            print('Could not use WU, tried OWM')
+            f = urllib2.urlopen('http://api.openweathermap.org/data/2.5/weather?q=Ijsselstein&APPID=37c36ad4b5df0e23f93e8cff206e5a2c')
+            json_string = f.read()
+            parsed_json = json.loads(json_string)
+            Wind = int(float(parsed_json['wind']['speed']))
+            WindGust = 99
+            WindDir = 99
+            WindDirAngle = int(float(parsed_json['wind']['deg']))
+
         d['Wind']=Wind
         d['WindGust']=WindGust
         d['WindDirAngle']=WindDirAngle
@@ -97,19 +120,24 @@ if __name__ == '__main__':
 
     d = manager.dict() # all the shared dictnaries between processes
 
-    d['bias_az'] = conf.bias_az # deg
-    d['bias_el'] = conf.bias_el # deg
+    d['bias_az'] = conf.bias_az # Need to initialize here to use it in main
+    d['bias_el'] = conf.bias_el
+    d['az_rep'] = state.az_rep
+    d['el_rep'] = state.el_rep
+    d['az_false_reading'] = False
+    d['el_false_reading'] = False
+    d['WindGust'] = state.wind_gust
 
-    #p1 = Process(target=read_az, args=(d))
-    p2 = Process(target=read_el, args=(d))
-    p3 = Process(target=check_wind, args=(d))
+    print(d)
+
+    #p1 = Process(target=read_az, args=(d,))
+    p2 = Process(target=read_el, args=(d,))
+    p3 = Process(target=check_wind, args=(d,))
 
     #p1.start()
     p2.start()
     p3.start()
 
     while(1):
-        print('In main azimuth: ',d['az_rep'])
-        print('In main elevation: ',d['el_rep'])
-        print('In main wind: ',d['Wind'])
+        print(d)
         time.sleep(3)
