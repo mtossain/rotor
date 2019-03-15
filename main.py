@@ -20,7 +20,7 @@ az_tracking_band = 2 # Tracking band in [deg]
 el_active = True # Elevation motors activated?
 el_sense_active = True # Elevation sensors activated?
 el_tracking_band = 0.3 # Tracking band in [deg]
-wind_check = False # Checking wind gust
+wind_check = True # Checking wind gust
 
 
 class Config:
@@ -271,7 +271,7 @@ def init_screen(stdscr):
    stdscr.addstr(11, check_start_middle(width,string),string)
    string = "Lon rotor: {:.2f} [deg E]".format(conf.rotor_lon)[:width-1]
    stdscr.addstr(12, check_start_middle(width,string),string)
-   string = "Alt rotor: {:.2f} [m]".format(conf.rotor_alt)[:width-1]
+   string = "Min elev: {:.1f} [deg]".format(conf.el_min)[:width-1]
    stdscr.addstr(13, check_start_middle(width,string),string)
    string = "Bias AZ sensor: {:.2f} [deg]".format(conf.bias_az)[:width-1]
    stdscr.addstr(14, check_start_middle(width,string),string)
@@ -423,13 +423,14 @@ def mainloop(stdscr):
 
     d = manager.dict() # all the shared dictionaries between processes
 
+    
     d['bias_az'] = conf.bias_az # Need to initialize here to use it in main
     d['bias_el'] = conf.bias_el
-    d['az_rep'] = state.az_rep
-    d['el_rep'] = state.el_rep
-    d['az_false_reading'] = False
-    d['el_false_reading'] = False
-    d['WindGust'] = state.wind_gust
+    #d['az_rep'] = state.az_rep
+    #d['el_rep'] = state.el_rep
+    #d['az_false_reading'] = False
+    #d['el_false_reading'] = False
+    #d['WindGust'] = state.wind_gust
 
     if az_sense_active:
         p1 = Process(target=read_az, args=(d,))
@@ -440,6 +441,8 @@ def mainloop(stdscr):
     if wind_check:
         p3 = Process(target=check_wind, args=(d,))
         p3.start()
+
+    time.sleep(1)
 
     init_screen(stdscr) # Initialise the screen
 
