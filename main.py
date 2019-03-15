@@ -323,7 +323,6 @@ def check_wind(d):
             #WindDir = parsed_json['current_observation']['wind_dir']
             #WindDirAngle = int(float(parsed_json['current_observation']['wind_degrees']))
         except:
-            print('Could not use WU, tried OWM')
             f = urllib2.urlopen('http://api.openweathermap.org/data/2.5/weather?q=Ijsselstein&APPID=37c36ad4b5df0e23f93e8cff206e5a2c')
             json_string = f.read()
             parsed_json = json.loads(json_string)
