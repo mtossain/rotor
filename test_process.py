@@ -333,7 +333,7 @@ def check_wind(d):
 
         d['Wind']=Wind
         d['WindGust']=WindGust
-        d['WindDirAngle']=WindDirAngle
+        #d['WindDirAngle']=WindDirAngle
 
         time.sleep(1)
 
