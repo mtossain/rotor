@@ -309,8 +309,8 @@ def read_el(d):
 
 def check_wind(d):
 
-    wind_s = smooth.Smooth(5,10)
-    wind_gust_s = smooth.Smooth(5,10)
+    wind_s = smooth.Smooth(10,10)
+    wind_gust_s = smooth.Smooth(10,10)
 
     while(1):
         try:
