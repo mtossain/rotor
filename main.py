@@ -45,11 +45,11 @@ class Config:
 
    el_active = True # Elevation motors activated?
    el_sense_active = True # Elevation sensors activated?
-   el_tracking_band = 0.3 # Tracking band in [deg]
-   el_min = 45 # minimum angle that elevation can go to
+   el_tracking_band = 1 # Tracking band in [deg]
+   el_min = 30 # minimum angle that elevation can go to
 
    max_wind_gust = 6 # When wind gust exceed point to zenith
-   wind_check = True # Checking wind gust
+   wind_check = False # Checking wind gust
 
 
 class State:
