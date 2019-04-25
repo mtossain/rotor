@@ -8,7 +8,7 @@ logHandler.setLevel(logging.INFO)
 logHandler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(logHandler)
 
-logger.info('Information message - Finn is een held')
+logger.info(['Going to AZ/EL [req/req]:', str(5), str(5)])
 logger.warning('Warning message')
 logger.error('Error message in file')
 

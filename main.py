@@ -370,16 +370,16 @@ def check_state():  # Check the state and whether target is achieved
         if (state.az_stat == 'x') or (state.el_stat == 'x'):
             state.az_req = conf.goto_az
             state.el_req = conf.goto_el
-            logger.info('Going to AZ/EL [req/req]:', str(state.az_req), str(state.el_req))
+            logger.info(['Going to AZ/EL [req/req]:', str(state.az_req), str(state.el_req)])
         if (state.az_stat == 'c') or (state.el_stat == 'c'):
             state.az_req, state.el_req = compute_azel_from_radec(conf)  # Update the target
-            logger.info('Going to AZ/EL [req/req]:', str(state.az_req), str(state.el_req))
+            logger.info(['Going to AZ/EL [req/req]:', str(state.az_req), str(state.el_req)])
         if (state.az_stat == 'b') or (state.el_stat == 'b'):
             state.az_req, state.el_req = compute_azel_from_planet(conf)  # Update the target
-            logger.info('Going to AZ/EL [req/req]:', str(state.az_req), str(state.el_req))
+            logger.info(['Going to AZ/EL [req/req]:', str(state.az_req), str(state.el_req)])
         if (state.az_stat == 'v') or (state.el_stat == 'v'):
             state.az_req, state.el_req = compute_azel_from_tle(conf)  # Update the target
-            logger.info('Going to AZ/EL [req/req]:', str(state.az_req), str(state.el_req))
+            logger.info(['Going to AZ/EL [req/req]:', str(state.az_req), str(state.el_req)])
 
         check_above_mask()  # Check whether pointing target is above the mask
 
@@ -393,16 +393,16 @@ def check_state():  # Check the state and whether target is achieved
                 stop_az()
             if abs(state.az_req - state.az_rep) < conf.az_tracking_band:
                 stop_az()
-                logger.info('Stopping az tracking [req/rep]:', str(state.az_req), str(state.az_rep))
+                logger.info(['Stopping az tracking [req/rep]:', str(state.az_req), str(state.az_rep)])
                 if state.az_stat == 'x':  # Only for the goto/wind command finish automatically (no tracking)
                     state.az_stat = 'r'
             else:  # order is very important otherwise start/stop
                 if state.az_req - state.az_rep > conf.az_tracking_band and state.above_mask:
                     for_az()
-                    logger.info('Forward az tracking [req/rep]:', str(state.az_req), str(state.az_rep))
+                    logger.info(['Forward az tracking [req/rep]:', str(state.az_req), str(state.az_rep)])
                 if state.az_req - state.az_rep < conf.az_tracking_band and state.above_mask:
                     rev_az()
-                    logger.info('Reverse az tracking [req/rep]:', str(state.az_req), str(state.az_rep))
+                    logger.info(['Reverse az tracking [req/rep]:', str(state.az_req), str(state.az_rep)])
 
         if conf.el_active:
             if not state.above_mask:
@@ -411,16 +411,16 @@ def check_state():  # Check the state and whether target is achieved
                 state.el_req = conf.el_min
             if abs(state.el_req - state.el_rep) < conf.el_tracking_band:
                 stop_el()
-                logger.info('Stopping el tracking [req/rep]:', str(state.el_req), str(state.el_rep))
+                logger.info(['Stopping el tracking [req/rep]:', str(state.el_req), str(state.el_rep)])
                 if state.el_stat == 'x':  # Only for the goto/wind command finish automatically (no tracking)
                     state.el_stat = 'f'
             else:  # order is very important otherwise start/stop
                 if state.el_req - state.el_rep > conf.el_tracking_band:
                     for_el()
-                    logger.info('Forward el tracking [req/rep]:', str(state.el_req), str(state.el_rep))
+                    logger.info(['Forward el tracking [req/rep]:', str(state.el_req), str(state.el_rep)])
                 if state.el_req - state.el_rep < conf.el_tracking_band:
                     rev_el()
-                    logger.info('Reverse el tracking [req/rep]:', str(state.el_req), str(state.el_rep))
+                    logger.info(['Reverse el tracking [req/rep]:', str(state.el_req), str(state.el_rep)])
 
 
 def read_sensor(d):
