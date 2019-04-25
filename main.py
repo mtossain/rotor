@@ -21,7 +21,7 @@ from read_heading import *
 
 logger = logging.getLogger('my_app')
 logger.setLevel(logging.INFO)
-logHandler = handlers.RotatingFileHandler('main.log', maxBytes=500, backupCount=2)
+logHandler = handlers.RotatingFileHandler('main.log', maxBytes=5*1024*1024, backupCount=2)
 logHandler.setLevel(logging.INFO)
 logHandler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(logHandler)
