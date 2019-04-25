@@ -2,40 +2,41 @@
 # Program to control rotor for dish, antenna or other pointing purpose
 # v1 2018, M. Tossaint, For SETI application and 3m dish
 # v2 2019, M. Tossaint, For Solar Panel steering to Sun
+# v3 2019, M. Tossaint, added logging feature
 ###############################################################################
 from multiprocessing import Process, Manager
-import time
-import sys, os
+import os
 import curses
 import datetime
-import math
 import json
-from dateutil.parser import *
 import urllib2
+import logging
+import logging.handlers as handlers
 
 # from motor_control import * # PWM was tested but failed completely
 import smooth
 from motor_control_nopwm import *
 from astronomical import *
 from read_heading import *
-import logging
 
+logger = logging.getLogger('my_app')
+logger.setLevel(logging.INFO)
+logHandler = handlers.RotatingFileHandler('main.log', maxBytes=500, backupCount=2)
+logHandler.setLevel(logging.INFO)
+logHandler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(logHandler)
 
 class Config:
-    rotor_lat = 52.04058  # deg N
-    rotor_lon = 5.03625  # deg E
-    rotor_alt = 4  # m
 
-    bias_az = -32.0  # deg
-    bias_el = 58.9  # deg
+    rotor_lat, rotor_lon, rotor_alt = 52.04058, 5.03625, 4  # deg N,E,m
+
+    bias_az, bias_el = -32.0, 58.9  # deg
 
     mask = [15, 15, 15, 15]  # sectorials from 0 to 360 in deg
 
-    goto_az = 0  # deg from 0 to 360
-    goto_el = 90  # deg from 0 (hor) to 90 (zenith)
+    goto_az, goto_el  = 0, 90 # deg from 0 to 360, el from 0 (hor) to 90 (zenith)
 
-    goto_ra = 5.5  # hours decimal
-    goto_dec = 22.0  # deg decimal
+    goto_ra, goto_dec = 5.5, 22.0  # hours decimal
 
     track_planet = 'Sun'  # planet in capital or small
     track_sat_tle = 'tle.txt'  # file with TLE elements, first one taken
@@ -54,20 +55,16 @@ class Config:
 
 
 class State:
-    az_req = 10  # deg
-    el_req = 50  # deg
 
-    az_rep = 185  # deg
-    el_rep = 85  # deg
+    az_req, el_req = 10, 50  # deg
 
-    az_stat = 'r'
-    el_stat = 'f'
+    az_rep, el_rep = 185, 85  # deg
 
-    az_false_reading = False
-    el_false_reading = False
+    az_stat, el_stat = 'r', 'f'  # status
 
-    motor_az_pins = [0, 0]
-    motor_el_pins = [0, 0]
+    az_false_reading, el_false_reading = False, False
+
+    motor_az_pins, motor_el_pins = [0, 0], [0, 0]
 
     above_mask = True  # Whether pointing target is above or below the set mask
     manual_mode = True  # Whether a manual mode or tracking mode command is given
@@ -77,7 +74,7 @@ class State:
 
 
 def convert_az_reading(angle):  # Takes an angle from -180 to 180 and converts to proper 0-360 CW
-    return 360 - (angle)
+    return 360 - angle
 
 
 def check_start_middle(width, str):  # Get the middle of the screen
@@ -166,76 +163,76 @@ def check_command():
     global k, conf, state
 
     if conf.az_active:  # Manual activation azimuth
-        if (k == ord('w')):
+        if k == ord('w'):
             rev_az()
             state.az_stat = 'w'
             state.manual_mode = True
-        if (k == ord('e')):
+        if k == ord('e'):
             rev_az()
             state.az_stat = 'e'
             state.manual_mode = True
-        if (k == ord('r') or k == ord(' ')):
+        if k == ord('r') or k == ord(' '):
             stop_az()
             state.az_stat = 'r'
             state.manual_mode = True
             state.above_mask = True
             state.az_req = 0
-        if (k == ord('t')):
+        if k == ord('t'):
             for_az()
             state.az_stat = 't'
             state.manual_mode = True
-        if (k == ord('y')):
+        if k == ord('y'):
             for_az()
             state.az_stat = 'y'
             state.manual_mode = True
 
-        if (k == ord('x')):
+        if k == ord('x'):
             state.az_stat = 'x'
             state.manual_mode = False
-        if (k == ord('c')):
+        if k == ord('c'):
             state.az_stat = 'c'
             state.manual_mode = False
-        if (k == ord('b')):
+        if k == ord('b'):
             state.az_stat = 'b'
             state.manual_mode = False
-        if (k == ord('v')):
+        if k == ord('v'):
             state.az_stat = 'v'
             state.manual_mode = False
 
     if conf.el_active:  # Manual activation elevation
-        if (k == ord('s')):
+        if k == ord('s'):
             rev_el()
             state.el_stat = 's'
             state.manual_mode = True
-        if (k == ord('d')):
+        if k == ord('d'):
             rev_el()
             state.el_stat = 'd'
             state.manual_mode = True
-        if (k == ord('f') or k == ord(' ')):
+        if k == ord('f') or k == ord(' '):
             stop_el()
             state.el_stat = 'f'
             state.manual_mode = True
             state.above_mask = True
             state.el_req = 90
-        if (k == ord('g')):
+        if k == ord('g'):
             for_el()
             state.el_stat = 'g'
             state.manual_mode = True
-        if (k == ord('h')):
+        if k == ord('h'):
             for_el()
             state.el_stat = 'h'
             state.manual_mode = True
 
-        if (k == ord('x')):
+        if k == ord('x'):
             state.el_stat = 'x'
             state.manual_mode = False
-        if (k == ord('c')):
+        if k == ord('c'):
             state.el_stat = 'c'
             state.manual_mode = False
-        if (k == ord('b')):
+        if k == ord('b'):
             state.el_stat = 'b'
             state.manual_mode = False
-        if (k == ord('v')):
+        if k == ord('v'):
             state.el_stat = 'v'
             state.manual_mode = False
 
@@ -245,7 +242,7 @@ def init_screen(stdscr):
 
     stdscr.clear()  # Clear the screen
     curses.curs_set(0)  # Hide cursor
-    stdscr.nodelay(True)  # Dont wait for input
+    stdscr.nodelay(True)  # Don't wait for input
 
     curses.start_color()  # Define colors in curses
     curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
@@ -257,7 +254,7 @@ def init_screen(stdscr):
 
     height, width = stdscr.getmaxyx()  # Get the dimensions of the terminal
 
-    stdscr.addstr(0, 0, '-' * width, curses.color_pair(2))  # Seperation line over full length
+    stdscr.addstr(0, 0, '-' * width, curses.color_pair(2))  # Separation line over full length
 
     # Print rest of text
     string = "--- Keyboard Commands ---"
@@ -280,7 +277,7 @@ def init_screen(stdscr):
     stdscr.addstr(8, 42, "'v' track satellite file: {}".format(conf.track_sat_tle)[:width - 1])
     stdscr.addstr(8, 42, "'v'"[:width - 1], curses.color_pair(4) + curses.A_BOLD)
 
-    stdscr.addstr(10, 0, '-' * width, curses.color_pair(2))  # Seperation line over full length
+    stdscr.addstr(10, 0, '-' * width, curses.color_pair(2))  # Separation line over full length
     string = "--- Configuration ---"
     stdscr.addstr(10, check_start_middle(width, string), string[:width - 1], curses.color_pair(6) + curses.A_BOLD)
 
@@ -297,7 +294,7 @@ def init_screen(stdscr):
     string = "Masking: {} [deg el]".format(str(conf.mask))[:width - 1]
     stdscr.addstr(16, check_start_middle(width, string), string)
 
-    stdscr.addstr(18, 0, '-' * width, curses.color_pair(2))  # Seperation line over full length
+    stdscr.addstr(18, 0, '-' * width, curses.color_pair(2))  # Separation line over full length
     string = "--- Rotor State Variables ---"
     stdscr.addstr(18, check_start_middle(width, string), string[:width - 1], curses.color_pair(6) + curses.A_BOLD)
 
@@ -317,7 +314,7 @@ def init_screen(stdscr):
 
 
 def read_az(d):
-    while (1):
+    while 1:
         false_reading, angle = read_az_ang()
         d['az_false_reading'] = True
         if not false_reading:
@@ -327,7 +324,7 @@ def read_az(d):
 
 
 def read_el(d):
-    while (1):
+    while 1:
         false_reading, angle = read_el_ang()
         d['el_false_reading'] = True
         if not false_reading:
@@ -340,28 +337,23 @@ def check_wind(d):
     wind_s = smooth.Smooth(10, 10)
     wind_gust_s = smooth.Smooth(10, 10)
 
-    while (1):
+    while 1:
         try:
             f = urllib2.urlopen('http://api.wunderground.com/api/c76852885ada6b8a/conditions/q/Ijsselstein.json')
             json_string = f.read()
             parsed_json = json.loads(json_string)
-            Wind = round(wind_s.add_step(int(float(parsed_json['current_observation']['wind_kph']))))
-            WindGust = round(wind_gust_s.add_step(int(float(parsed_json['current_observation']['wind_gust_kph']))))
-            # WindDir = parsed_json['current_observation']['wind_dir']
-            # WindDirAngle = int(float(parsed_json['current_observation']['wind_degrees']))
+            wind = round(wind_s.add_step(int(float(parsed_json['current_observation']['wind_kph']))))
+            wind_gust = round(wind_gust_s.add_step(int(float(parsed_json['current_observation']['wind_gust_kph']))))
         except:
             f = urllib2.urlopen(
                 'http://api.openweathermap.org/data/2.5/weather?q=Ijsselstein&APPID=37c36ad4b5df0e23f93e8cff206e5a2c')
             json_string = f.read()
             parsed_json = json.loads(json_string)
-            Wind = round(wind_s.add_step(int(float(parsed_json['wind']['speed']))))
-            WindGust = Wind
-            # WindDir = 99
-            # WindDirAngle = int(float(parsed_json['wind']['deg']))
+            wind = round(wind_s.add_step(int(float(parsed_json['wind']['speed']))))
+            wind_gust = Wind
 
-        d['Wind'] = Wind
-        d['WindGust'] = WindGust
-        # d['WindDirAngle']=WindDirAngle
+        d['Wind'] = wind
+        d['WindGust'] = wind_gust
 
         time.sleep(1)
 
@@ -372,53 +364,63 @@ def check_state():  # Check the state and whether target is achieved
 
     check_above_mask()  # Check whether pointing target is above the mask
 
-    if state.manual_mode == False:  # Checking only needed for non manual modes
+    if not state.manual_mode:  # Checking only needed for non manual modes
 
         # Update the pointing target
         if (state.az_stat == 'x') or (state.el_stat == 'x'):
             state.az_req = conf.goto_az
             state.el_req = conf.goto_el
+            logger.info('Going to AZ/EL [req/req]:', str(state.az_req), str(state.el_req))
         if (state.az_stat == 'c') or (state.el_stat == 'c'):
             state.az_req, state.el_req = compute_azel_from_radec(conf)  # Update the target
+            logger.info('Going to AZ/EL [req/req]:', str(state.az_req), str(state.el_req))
         if (state.az_stat == 'b') or (state.el_stat == 'b'):
             state.az_req, state.el_req = compute_azel_from_planet(conf)  # Update the target
+            logger.info('Going to AZ/EL [req/req]:', str(state.az_req), str(state.el_req))
         if (state.az_stat == 'v') or (state.el_stat == 'v'):
             state.az_req, state.el_req = compute_azel_from_tle(conf)  # Update the target
+            logger.info('Going to AZ/EL [req/req]:', str(state.az_req), str(state.el_req))
 
         check_above_mask()  # Check whether pointing target is above the mask
 
-        if (
-                conf.wind_check and state.wind_gust > conf.max_wind_gust):  # If wind is too strong then go into safe mode at 90 elevation
+        # If wind is too strong then go into safe mode at 90 elevation
+        if conf.wind_check and state.wind_gust > conf.max_wind_gust:
             state.el_req = 90
 
         # Update movement of motors
         if conf.az_active:
-            if (not state.above_mask):
+            if not state.above_mask:
                 stop_az()
-            if (abs(state.az_req - state.az_rep) < conf.az_tracking_band):
+            if abs(state.az_req - state.az_rep) < conf.az_tracking_band:
                 stop_az()
-                if (state.az_stat == 'x'):  # Only for the goto/wind command finish automatically (no tracking)
+                logger.info('Stopping az tracking [req/rep]:', str(state.az_req), str(state.az_rep))
+                if state.az_stat == 'x':  # Only for the goto/wind command finish automatically (no tracking)
                     state.az_stat = 'r'
             else:  # order is very important otherwise start/stop
-                if (state.az_req - state.az_rep > conf.az_tracking_band and state.above_mask):
+                if state.az_req - state.az_rep > conf.az_tracking_band and state.above_mask:
                     for_az()
-                if (state.az_req - state.az_rep < conf.az_tracking_band and state.above_mask):
+                    logger.info('Forward az tracking [req/rep]:', str(state.az_req), str(state.az_rep))
+                if state.az_req - state.az_rep < conf.az_tracking_band and state.above_mask:
                     rev_az()
+                    logger.info('Reverse az tracking [req/rep]:', str(state.az_req), str(state.az_rep))
 
         if conf.el_active:
-            if (not state.above_mask):
+            if not state.above_mask:
                 state.el_req = 90  # If under mask, then point to zenith
             if state.el_req < conf.el_min:
                 state.el_req = conf.el_min
-            if (abs(state.el_req - state.el_rep) < conf.el_tracking_band):
+            if abs(state.el_req - state.el_rep) < conf.el_tracking_band:
                 stop_el()
-                if (state.el_stat == 'x'):  # Only for the goto/wind command finish automatically (no tracking)
+                logger.info('Stopping el tracking [req/rep]:', str(state.el_req), str(state.el_rep))
+                if state.el_stat == 'x':  # Only for the goto/wind command finish automatically (no tracking)
                     state.el_stat = 'f'
             else:  # order is very important otherwise start/stop
-                if (state.el_req - state.el_rep > conf.el_tracking_band):
+                if state.el_req - state.el_rep > conf.el_tracking_band:
                     for_el()
-                if (state.el_req - state.el_rep < conf.el_tracking_band):
+                    logger.info('Forward el tracking [req/rep]:', str(state.el_req), str(state.el_rep))
+                if state.el_req - state.el_rep < conf.el_tracking_band:
                     rev_el()
+                    logger.info('Reverse el tracking [req/rep]:', str(state.el_req), str(state.el_rep))
 
 
 def read_sensor(d):
@@ -470,7 +472,7 @@ def mainloop(stdscr):
 
     init_screen(stdscr)  # Initialise the screen
 
-    while (k != ord('q')):  # Loop where k is the last character pressed
+    while k != ord('q'):  # Loop where k is the last character pressed
 
         read_sensor(d)  # Read the input of the AMS5048B sensor
 
